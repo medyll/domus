@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 58
-next_action: "Implement S1-03: Implement Effect scheduling and runtime batching"
+progress: 68
+next_action: "Implement S1-06: Implement effect and scope disposal"
 active_role: dev
 
 phases:
