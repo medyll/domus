@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 53
-next_action: "Implement S1-02: Add CLI command scaffolding"
+progress: 58
+next_action: "Implement S1-03: Implement Effect scheduling and runtime batching"
 active_role: dev
 
 phases:

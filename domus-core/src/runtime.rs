@@ -107,17 +107,20 @@ mod tests {
     use super::*;
     use crate::effect::create_effect;
     use crate::signal::signal;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     #[test]
     fn runtime_schedule_runs_effect() {
         let s = signal(0);
-        let mut runs = 0;
+        let runs = Rc::new(RefCell::new(0));
         let s2 = s.clone();
+        let runs_clone = Rc::clone(&runs);
         create_effect(move || {
             let _ = s2.get();
-            runs += 1;
+            *runs_clone.borrow_mut() += 1;
         });
         s.set(1);
-        assert!(runs >= 2);
+        assert!(*runs.borrow() >= 2);
     }
 }

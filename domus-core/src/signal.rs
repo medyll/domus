@@ -75,17 +75,18 @@ mod tests {
     #[test]
     fn signal_get_set_works_and_tracks() {
         let counter = signal(0);
-        let mut runs = 0;
+        let runs = Rc::new(RefCell::new(0));
 
         let counter_clone = counter.clone();
+        let runs_clone = Rc::clone(&runs);
         create_effect(move || {
             let _ = counter_clone.get();
-            runs += 1;
+            *runs_clone.borrow_mut() += 1;
         });
 
-        assert_eq!(runs, 1);
+        assert_eq!(*runs.borrow(), 1);
         counter.set(1);
         // Effects are scheduled; in this simple runtime they run immediately
-        assert_eq!(runs, 2);
+        assert_eq!(*runs.borrow(), 2);
     }
 }
