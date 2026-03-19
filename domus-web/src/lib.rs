@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod component;
+pub mod list;
 pub mod page;
 pub mod router;
 pub use component::{DomusComponent, DomusNode, mount_component};

@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 98
-next_action: "Sprint 5: S5-01 — full workspace test suite and README"
+progress: 100
+next_action: "Sprint 5 remaining: S5-02 (Show/Hide), S5-03 (Portal) — or release prep"
 active_role: dev
 
 phases:
@@ -50,7 +50,7 @@ sprints:
     stories:
       - S4-01
   - id: 5
-    status: planned
+    status: active
     stories:
       - S5-01
       - S5-02
