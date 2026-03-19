@@ -1,0 +1,26 @@
+# BMAD Status
+project: Domus
+phase: planning
+progress: 35
+next_action: "Define implementation roadmap and create development sprints"
+active_role: architect
+
+phases:
+  - name: planning
+    status: in_progress
+  - name: development
+    status: upcoming
+  - name: testing
+    status: upcoming
+  - name: release
+    status: upcoming
+
+artifacts:
+  prd: done
+  architecture: done
+  tech-spec: done
+  cli-spec: in_progress
+  test-strategy: in_progress
+  roadmap: pending
+
+sprints: []

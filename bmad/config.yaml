@@ -1,0 +1,96 @@
+# BMAD Configuration
+# Project: Domus Framework
+
+# Project metadata
+project:
+  name: "Domus: Fine-Grained Reactivity Framework"
+  description: "A Rust/WASM web framework eliminating Virtual DOM in favor of fine-grained reactivity"
+  owner: "Mydde"
+  repository: "https://github.com/mydde/domus"
+
+# Role overrides (if any)
+role:
+  architect:
+    prompt: |
+      You are the architect for Domus, a Rust web framework.
+      Focus on: system design, crate separation, performance characteristics, and memory safety.
+      All decisions must support fine-grained reactivity and O(1) updates.
+    ref: ""
+
+# Technology stack
+tech_stack:
+  language: "Rust"
+  target: "WebAssembly (wasm32-unknown-unknown)"
+  macro_system: "proc-macro2 + syn + quote"
+  dom_binding: "web-sys + wasm-bindgen"
+  runtime: "JavaScript (browser)"
+
+# Development phases
+phases:
+  planning:
+    duration_weeks: 2
+    status: in_progress
+    deliverables:
+      - PROJECT.md (complete)
+      - Architecture Plan (complete)
+      - Technical Specification (complete)
+      - CLI Specification (in progress)
+      - Test Strategy (in progress)
+
+  development:
+    duration_weeks: 12
+    status: upcoming
+    deliverables:
+      - MVP 1: Reactive Core
+      - MVP 2: Rendering Engine
+      - MVP 3: Component System
+      - MVP 4: Routing
+      - MVP 5: Advanced Features
+      - MVP 6: Production Ready
+
+  testing:
+    duration_weeks: 3
+    status: upcoming
+    deliverables:
+      - Unit test suite
+      - Integration tests
+      - Example applications
+      - Performance benchmarks
+
+  release:
+    duration_weeks: 1
+    status: upcoming
+    deliverables:
+      - v0.1.0-alpha release
+      - Documentation website
+      - GitHub repository setup
+
+# Artifact locations
+artifacts:
+  planning: "bmad/artifacts/plan-*.md"
+  sprints: "bmad/artifacts/sprint-*.md"
+  stories: "bmad/artifacts/stories/"
+  docs: "bmad/artifacts/docs/"
+  history: "bmad/artifacts/history/"
+
+# Quality gates
+quality:
+  documentation: "All public APIs must have rustdoc examples"
+  testing: "Minimum 80% coverage for core modules"
+  performance: "All updates must be O(1) or better"
+  type_safety: "No unsafe code outside FFI boundary"
+
+# Next actions queue
+next_actions:
+  - "Create implementation roadmap with sprint breakdown"
+  - "Set up Cargo workspace structure"
+  - "Implement domus-core: Signal and Effect"
+  - "Implement domus-macro: RSX parser"
+  - "Create hello-world example"
+
+# Team & roles
+team:
+  architect: "Claude (AI)"
+  pm: "Claude (AI)"
+  developer: "Mydde (Human) + Claude (AI)"
+  reviewer: "Code review (CI/CD)"
