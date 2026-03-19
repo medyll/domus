@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Node", "Console"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Node", "console"] }
 js-sys = "0.3"
