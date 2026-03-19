@@ -1,0 +1,7 @@
+[package]
+name = "domus-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+domus-core = { path = "../domus-core" }

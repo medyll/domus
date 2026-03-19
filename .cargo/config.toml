@@ -1,0 +1,3 @@
+[build]
+# Optimize release builds for performance.
+opt-level = 3
