@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod component;
+pub mod context;
 pub mod list;
 pub mod page;
 pub mod router;
