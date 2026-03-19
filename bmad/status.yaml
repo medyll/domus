@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: planning
-progress: 35
-next_action: "Define implementation roadmap and create development sprints"
+progress: 50
+next_action: "Begin Sprint 1: Setup workspace and implement Signal<T>"
 active_role: architect
 
 phases:
@@ -19,8 +19,45 @@ artifacts:
   prd: done
   architecture: done
   tech-spec: done
+  roadmap: done
+  stories: done
   cli-spec: in_progress
   test-strategy: in_progress
-  roadmap: pending
 
-sprints: []
+sprints:
+  - id: 1
+    status: planned
+    stories:
+      - S1-01
+      - S1-02
+      - S1-03
+      - S1-04
+      - S1-05
+      - S1-06
+  - id: 2
+    status: planned
+    stories:
+      - S2-01
+      - S2-02
+      - S2-03
+      - S2-04
+  - id: 3
+    status: planned
+    stories:
+      - S3-01
+  - id: 4
+    status: planned
+    stories:
+      - S4-01
+  - id: 5
+    status: planned
+    stories:
+      - S5-01
+      - S5-02
+      - S5-03
+  - id: 6
+    status: planned
+    stories:
+      - S6-01
+      - S6-02
+      - S6-03

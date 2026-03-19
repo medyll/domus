@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(node C:UsersMydde.claudeskillsbmad-masterscriptsbmad.mjs init)",
-      "Bash(ls -lah bmad/*.yaml)"
+      "Bash(ls -lah bmad/*.yaml)",
+      "Bash(wc -l bmad/artifacts/*.md)"
     ]
   }
 }
