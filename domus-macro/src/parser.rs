@@ -95,11 +95,12 @@ fn parse_rust_style(tokens: &[TokenTree]) -> SynResult<RsxNode> {
 
 /// Parse HTML-style RSX: `<div attrs>children</div>`.
 fn parse_html_style(tokens: &[TokenTree]) -> SynResult<RsxNode> {
+    // Use space separator so adjacent idents don't merge (e.g. `div` + `class` → `divclass`)
     let source = tokens
         .iter()
         .map(|t| t.to_string())
         .collect::<Vec<_>>()
-        .join("");
+        .join(" ");
 
     let mut parser = HtmlStyleParser::new(&source);
     parser.parse_element()
@@ -313,6 +314,7 @@ impl HtmlStyleParser {
             return Err(Error::new(Span::call_site(), "expected '<'"));
         }
         self.advance(1);
+        self.skip_whitespace(); // tokens are space-joined, so `< div` has a space
 
         // Parse tag name
         let tag = self.parse_tag_name()?;
@@ -323,8 +325,9 @@ impl HtmlStyleParser {
 
         while self.current_char() != Some('>') && self.current_char().is_some() {
             if self.current_char() == Some('/') {
-                // Self-closing element
+                // Self-closing element (`/ >` with space after space-join)
                 self.advance(1);
+                self.skip_whitespace();
                 if self.current_char() == Some('>') {
                     self.advance(1);
                     return Ok(RsxNode::Element {
@@ -352,8 +355,10 @@ impl HtmlStyleParser {
         self.skip_whitespace();
         if self.current_char() == Some('<') {
             self.advance(1);
+            self.skip_whitespace();
             if self.current_char() == Some('/') {
                 self.advance(1);
+                self.skip_whitespace();
                 let closing_tag = self.parse_tag_name()?;
                 if closing_tag != tag {
                     return Err(Error::new(
@@ -462,9 +467,10 @@ impl HtmlStyleParser {
 
         while self.pos < self.source.len() {
             if self.current_char() == Some('<') {
-                // Check if it's a closing tag
+                // Check if it's a closing tag (tokens are space-joined so `</` → `< /`)
                 let saved_pos = self.pos;
                 self.advance(1);
+                self.skip_whitespace();
                 if self.current_char() == Some('/') {
                     // Closing tag found, restore position and break
                     self.pos = saved_pos;
@@ -682,7 +688,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_html_style_with_attributes() {
         let input = quote! {
             <div class="container" id="main"> content </div>
@@ -740,7 +745,6 @@ mod tests {
     // --- Bidirectional equivalence ---
 
     #[test]
-    #[ignore]
     fn test_rust_and_html_produce_similar_ast() {
         let rust_input = quote! {
             div(class: "btn") { "Click" }

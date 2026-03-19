@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 80
-next_action: "Refine S2-01 parser: HTML attribute parsing and edge cases"
+progress: 83
+next_action: "Implement S2-02: DOM node builder and VNode representation"
 active_role: dev
 
 phases:
