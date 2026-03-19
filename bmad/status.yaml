@@ -1,9 +1,9 @@
 # BMAD Status
 project: Domus
-phase: planning
-progress: 50
-next_action: "Begin Sprint 1: Setup workspace and implement Signal<T>"
-active_role: architect
+phase: development
+progress: 51
+next_action: "Implement S1-01: Set up Cargo workspace and crate structure"
+active_role: dev
 
 phases:
   - name: planning
