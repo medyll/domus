@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 51
-next_action: "Implement S1-01: Set up Cargo workspace and crate structure"
+progress: 53
+next_action: "Implement S1-02: Add CLI command scaffolding"
 active_role: dev
 
 phases:
