@@ -1,8 +1,13 @@
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use std::cell::Cell;
+use syn::{visit_mut, visit_mut::VisitMut, Expr};
 
 use crate::parser::{RsxAttr, RsxNode};
+
+// ---------------------------------------------------------------------------
+// Counter for unique variable names
+// ---------------------------------------------------------------------------
 
 thread_local! {
     static COUNTER: Cell<usize> = Cell::new(0);
@@ -20,20 +25,50 @@ fn reset_counter() {
     COUNTER.with(|c| c.set(0));
 }
 
-/// Generate a TokenStream that builds static DOM from an RsxNode.
-/// Dynamic nodes (S2-03) are not yet handled.
-pub fn generate_static(node: &RsxNode) -> TokenStream {
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/// Generate a TokenStream that builds DOM from an RsxNode.
+/// Handles both static elements and dynamic signal bindings.
+pub fn generate(node: &RsxNode) -> TokenStream {
     reset_counter();
-    gen_node(node)
+    gen_node(node, None)
 }
 
-fn gen_node(node: &RsxNode) -> TokenStream {
+/// Backward-compat alias used by static-only tests.
+pub fn generate_static(node: &RsxNode) -> TokenStream {
+    generate(node)
+}
+
+// ---------------------------------------------------------------------------
+// Node generation
+// ---------------------------------------------------------------------------
+
+/// Generate code for a node.
+/// `parent_var`: if Some, dynamic children append themselves to it directly.
+fn gen_node(node: &RsxNode, parent_var: Option<&Ident>) -> TokenStream {
     match node {
         RsxNode::Element { tag, attrs, children } => gen_element(tag, attrs, children),
-        RsxNode::Text(content) => gen_text(content),
-        RsxNode::Dynamic(_) => {
-            // Dynamic bindings handled in S2-03
-            quote! { compile_error!("dynamic bindings require S2-03 effect integration") }
+        RsxNode::Text(content) => {
+            let text = content.trim_matches('"');
+            quote! {
+                web_sys::window()
+                    .expect("no window")
+                    .document()
+                    .expect("no document")
+                    .create_text_node(#text)
+                    .dyn_into::<web_sys::Node>()
+                    .expect("text node as Node")
+            }
+        }
+        RsxNode::Dynamic(expr) => {
+            if let Some(pv) = parent_var {
+                // Inline dynamic binding: append text node + create_effect
+                gen_dynamic_text_inline(expr, pv)
+            } else {
+                quote! { compile_error!("Dynamic node must be inside an element") }
+            }
         }
         RsxNode::Component { name, .. } => {
             let msg = format!("component <{}> not yet supported", name);
@@ -46,18 +81,18 @@ fn gen_element(tag: &str, attrs: &[(String, RsxAttr)], children: &[RsxNode]) -> 
     let el_id = next_id();
     let el_var: Ident = format_ident!("__el_{}", el_id);
 
-    // Attribute-setting statements
-    let attr_stmts: Vec<TokenStream> = attrs
+    // Static attribute-setting statements
+    let static_attr_stmts: Vec<TokenStream> = attrs
         .iter()
+        .filter(|(_, v)| !matches!(v, RsxAttr::Dynamic(_)))
         .map(|(name, val)| {
             let attr_val = match val {
                 RsxAttr::String(s) => {
-                    // Strip surrounding quotes if present (from Rust literal)
                     let stripped = s.trim_matches('"');
                     quote! { #stripped }
                 }
                 RsxAttr::Ident(id) => quote! { #id },
-                RsxAttr::Dynamic(expr) => quote! { &(#expr).to_string() },
+                RsxAttr::Dynamic(_) => unreachable!(),
             };
             quote! {
                 #el_var.set_attribute(#name, #attr_val)
@@ -66,16 +101,33 @@ fn gen_element(tag: &str, attrs: &[(String, RsxAttr)], children: &[RsxNode]) -> 
         })
         .collect();
 
-    // Child-appending statements
+    // Dynamic attribute-binding effects
+    let dynamic_attr_stmts: Vec<TokenStream> = attrs
+        .iter()
+        .filter_map(|(name, val)| {
+            if let RsxAttr::Dynamic(expr) = val {
+                Some(gen_dynamic_attr_effect(expr, &el_var, name))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Child statements — dynamic children are handled specially
     let child_stmts: Vec<TokenStream> = children
         .iter()
         .map(|child| {
-            let child_ts = gen_node(child);
-            quote! {
-                {
-                    let __child = #child_ts;
-                    #el_var.append_child(&__child)
-                        .expect("failed to append child");
+            if let RsxNode::Dynamic(expr) = child {
+                // Dynamic text: inline — appends its own node
+                gen_dynamic_text_inline(expr, &el_var)
+            } else {
+                let child_ts = gen_node(child, Some(&el_var));
+                quote! {
+                    {
+                        let __child = #child_ts;
+                        #el_var.append_child(&__child)
+                            .expect("failed to append child");
+                    }
                 }
             }
         })
@@ -90,7 +142,8 @@ fn gen_element(tag: &str, attrs: &[(String, RsxAttr)], children: &[RsxNode]) -> 
                 .create_element(#tag)
                 .expect(concat!("failed to create element: ", #tag));
 
-            #(#attr_stmts)*
+            #(#static_attr_stmts)*
+            #(#dynamic_attr_stmts)*
             #(#child_stmts)*
 
             #el_var
@@ -98,40 +151,158 @@ fn gen_element(tag: &str, attrs: &[(String, RsxAttr)], children: &[RsxNode]) -> 
     }
 }
 
-fn gen_text(content: &str) -> TokenStream {
-    // Strip surrounding quotes from Rust string literals
-    let text = content.trim_matches('"');
+// ---------------------------------------------------------------------------
+// Dynamic binding helpers
+// ---------------------------------------------------------------------------
+
+/// Create an empty text node, append to `parent_var`, then wire up a
+/// `create_effect` that keeps it in sync with the signal expression.
+fn gen_dynamic_text_inline(expr: &Expr, parent_var: &Ident) -> TokenStream {
+    let dyn_id = next_id();
+    let dyn_var: Ident = format_ident!("__dyn_{}", dyn_id);
+    let dyn_clone: Ident = format_ident!("__dyn_{}_c", dyn_id);
+
+    let idents = analyze_expr(expr);
+    let clone_stmts = generate_clones(&idents);
+    let cloned_expr = substitute_clones(expr, &idents);
+
     quote! {
-        web_sys::window()
+        let #dyn_var = web_sys::window()
             .expect("no window")
             .document()
             .expect("no document")
-            .create_text_node(#text)
-            .dyn_into::<web_sys::Node>()
-            .expect("text node as Node")
+            .create_text_node("");
+        #parent_var.append_child(&#dyn_var)
+            .expect("failed to append dynamic text node");
+        #clone_stmts
+        {
+            let #dyn_clone = #dyn_var.clone();
+            domus_core::effect::create_effect(move || {
+                let __value = (#cloned_expr).to_string();
+                #dyn_clone.set_text_content(Some(&__value));
+            });
+        }
     }
 }
+
+/// Create an `create_effect` that keeps a DOM attribute in sync with a signal.
+fn gen_dynamic_attr_effect(expr: &Expr, el_var: &Ident, attr_name: &str) -> TokenStream {
+    let idents = analyze_expr(expr);
+    let clone_stmts = generate_clones(&idents);
+    let cloned_expr = substitute_clones(expr, &idents);
+    let el_clone: Ident = format_ident!("{}_ac", el_var);
+
+    quote! {
+        #clone_stmts
+        {
+            let #el_clone = #el_var.clone();
+            domus_core::effect::create_effect(move || {
+                let __value = (#cloned_expr).to_string();
+                #el_clone.set_attribute(#attr_name, &__value)
+                    .expect(concat!("failed to set dynamic attribute ", #attr_name));
+            });
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Expression analysis and clone substitution
+// ---------------------------------------------------------------------------
+
+/// Collect all simple identifiers used in `expr` (excluding method names).
+pub fn analyze_expr(expr: &Expr) -> Vec<String> {
+    let mut vars = Vec::new();
+    collect_idents(expr, &mut vars);
+    vars.sort();
+    vars.dedup();
+    vars
+}
+
+fn collect_idents(expr: &Expr, vars: &mut Vec<String>) {
+    match expr {
+        Expr::Path(p) => {
+            if let Some(ident) = p.path.get_ident() {
+                let name = ident.to_string();
+                // Skip Rust keywords / boolean literals
+                if !matches!(name.as_str(), "true" | "false" | "None" | "Some") {
+                    vars.push(name);
+                }
+            }
+        }
+        Expr::MethodCall(m) => {
+            collect_idents(&m.receiver, vars);
+            // Intentionally skip method name and args to avoid cloning method idents
+        }
+        Expr::Call(c) => {
+            collect_idents(&c.func, vars);
+            for arg in &c.args {
+                collect_idents(arg, vars);
+            }
+        }
+        Expr::Field(f) => collect_idents(&f.base, vars),
+        Expr::Unary(u) => collect_idents(&u.expr, vars),
+        Expr::Binary(b) => {
+            collect_idents(&b.left, vars);
+            collect_idents(&b.right, vars);
+        }
+        Expr::Paren(p) => collect_idents(&p.expr, vars),
+        Expr::Reference(r) => collect_idents(&r.expr, vars),
+        _ => {}
+    }
+}
+
+/// Generate `let x_clone = x.clone();` for each ident in `vars`.
+pub fn generate_clones(vars: &[String]) -> TokenStream {
+    let stmts = vars.iter().map(|var| {
+        let clone_var = format_ident!("{}_clone", var);
+        let orig_var = format_ident!("{}", var);
+        quote! { let #clone_var = #orig_var.clone(); }
+    });
+    quote! { #(#stmts)* }
+}
+
+/// Rewrite `expr` so every identifier in `idents` gets a `_clone` suffix.
+pub fn substitute_clones(expr: &Expr, idents: &[String]) -> Expr {
+    let mut out = expr.clone();
+    CloneSubstituter { idents }.visit_expr_mut(&mut out);
+    out
+}
+
+/// `syn::VisitMut` impl that renames listed identifiers to `{name}_clone`.
+struct CloneSubstituter<'a> {
+    idents: &'a [String],
+}
+
+impl VisitMut for CloneSubstituter<'_> {
+    fn visit_ident_mut(&mut self, node: &mut syn::Ident) {
+        if self.idents.contains(&node.to_string()) {
+            *node = format_ident!("{}_clone", node);
+        }
+        visit_mut::visit_ident_mut(self, node);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::parser::parse_rsx;
     use quote::quote;
+    use syn::parse_quote;
 
-    fn token_string(ts: TokenStream) -> String {
+    fn ts(ts: TokenStream) -> String {
         ts.to_string()
     }
 
+    // --- Static tests (unchanged) ---
+
     #[test]
     fn test_static_element_gen_is_valid_tokens() {
-        let ast = parse_rsx(quote! {
-            div(class: "btn") { "Click" }
-        })
-        .unwrap();
-
-        let generated = generate_static(&ast);
-        let s = token_string(generated);
-        // Should contain web_sys DOM calls
+        let ast = parse_rsx(quote! { div(class: "btn") { "Click" } }).unwrap();
+        let s = ts(generate_static(&ast));
         assert!(s.contains("create_element"));
         assert!(s.contains("set_attribute"));
         assert!(s.contains("create_text_node"));
@@ -140,7 +311,7 @@ mod tests {
     #[test]
     fn test_element_no_attrs_no_children() {
         let ast = parse_rsx(quote! { div { } }).unwrap();
-        let s = token_string(generate_static(&ast));
+        let s = ts(generate_static(&ast));
         assert!(s.contains("create_element"));
         assert!(!s.contains("set_attribute"));
         assert!(!s.contains("create_text_node"));
@@ -149,18 +320,15 @@ mod tests {
     #[test]
     fn test_text_node_gen() {
         let ast = parse_rsx(quote! { span { "hello world" } }).unwrap();
-        let s = token_string(generate_static(&ast));
+        let s = ts(generate_static(&ast));
         assert!(s.contains("create_text_node"));
         assert!(s.contains("hello world"));
     }
 
     #[test]
     fn test_multiple_attributes_gen() {
-        let ast = parse_rsx(quote! {
-            input(type: "text", placeholder: "Enter text")
-        })
-        .unwrap();
-        let s = token_string(generate_static(&ast));
+        let ast = parse_rsx(quote! { input(type: "text", placeholder: "Enter text") }).unwrap();
+        let s = ts(generate_static(&ast));
         assert!(s.contains("set_attribute"));
         assert!(s.contains("type"));
         assert!(s.contains("placeholder"));
@@ -168,29 +336,16 @@ mod tests {
 
     #[test]
     fn test_nested_element_gen() {
-        let ast = parse_rsx(quote! {
-            div {
-                span { "inner" }
-            }
-        })
-        .unwrap();
-        let s = token_string(generate_static(&ast));
+        let ast = parse_rsx(quote! { div { span { "inner" } } }).unwrap();
+        let s = ts(generate_static(&ast));
         assert!(s.contains("append_child"));
-        // Two create_element calls: div and span
         assert_eq!(s.matches("create_element").count(), 2);
     }
 
     #[test]
     fn test_variable_hygiene() {
-        let ast = parse_rsx(quote! {
-            div {
-                span { }
-                p { }
-            }
-        })
-        .unwrap();
-        let s = token_string(generate_static(&ast));
-        // Variables should use __el_ prefix
+        let ast = parse_rsx(quote! { div { span { } p { } } }).unwrap();
+        let s = ts(generate_static(&ast));
         assert!(s.contains("__el_0"));
         assert!(s.contains("__el_1"));
         assert!(s.contains("__el_2"));
@@ -198,12 +353,110 @@ mod tests {
 
     #[test]
     fn test_html_style_gen() {
-        let ast = parse_rsx(quote! {
-            <section> content </section>
-        })
-        .unwrap();
-        let s = token_string(generate_static(&ast));
+        let ast = parse_rsx(quote! { <section> content </section> }).unwrap();
+        let s = ts(generate_static(&ast));
         assert!(s.contains("create_element"));
         assert!(s.contains("section"));
+    }
+
+    // --- Dynamic binding tests ---
+
+    #[test]
+    fn test_analyze_expr_simple_ident() {
+        let expr: Expr = parse_quote! { count };
+        let vars = analyze_expr(&expr);
+        assert_eq!(vars, vec!["count"]);
+    }
+
+    #[test]
+    fn test_analyze_expr_method_call() {
+        let expr: Expr = parse_quote! { signal.get() };
+        let vars = analyze_expr(&expr);
+        assert_eq!(vars, vec!["signal"]);
+    }
+
+    #[test]
+    fn test_analyze_expr_binary() {
+        let expr: Expr = parse_quote! { a + b };
+        let vars = analyze_expr(&expr);
+        assert!(vars.contains(&"a".to_string()));
+        assert!(vars.contains(&"b".to_string()));
+    }
+
+    #[test]
+    fn test_analyze_expr_no_clone_for_literals() {
+        let expr: Expr = parse_quote! { "hello" };
+        let vars = analyze_expr(&expr);
+        assert!(vars.is_empty());
+    }
+
+    #[test]
+    fn test_analyze_expr_no_clone_for_booleans() {
+        let expr: Expr = parse_quote! { true };
+        let vars = analyze_expr(&expr);
+        assert!(vars.is_empty());
+    }
+
+    #[test]
+    fn test_generate_clones_output() {
+        let vars = vec!["count".to_string(), "name".to_string()];
+        let s = ts(generate_clones(&vars));
+        assert!(s.contains("count_clone"));
+        assert!(s.contains("name_clone"));
+        assert!(s.contains("clone ()"));
+    }
+
+    #[test]
+    fn test_substitute_clones_renames_idents() {
+        let expr: Expr = parse_quote! { count.get() };
+        let idents = vec!["count".to_string()];
+        let subst = substitute_clones(&expr, &idents);
+        let s = quote! { #subst }.to_string();
+        assert!(s.contains("count_clone"));
+        assert!(!s.contains("count.get"));
+    }
+
+    #[test]
+    fn test_dynamic_text_generates_create_effect() {
+        let ast = parse_rsx(quote! { span { {count} } }).unwrap();
+        let s = ts(generate(&ast));
+        assert!(s.contains("create_effect"));
+        assert!(s.contains("set_text_content"));
+        assert!(s.contains("count_clone"));
+        assert!(s.contains("create_text_node"));
+    }
+
+    #[test]
+    fn test_dynamic_attr_generates_create_effect() {
+        let ast = parse_rsx(quote! { div(class: {theme}) { } }).unwrap();
+        let s = ts(generate(&ast));
+        assert!(s.contains("create_effect"));
+        assert!(s.contains("set_attribute"));
+        assert!(s.contains("theme_clone"));
+    }
+
+    #[test]
+    fn test_multiple_dynamics_each_get_effect() {
+        let ast = parse_rsx(quote! { div { {first} {last} } }).unwrap();
+        let s = ts(generate(&ast));
+        assert_eq!(s.matches("create_effect").count(), 2);
+        assert!(s.contains("first_clone"));
+        assert!(s.contains("last_clone"));
+    }
+
+    #[test]
+    fn test_mixed_static_and_dynamic() {
+        let ast = parse_rsx(quote! { div { "Static " {dynamic_val} } }).unwrap();
+        let s = ts(generate(&ast));
+        assert!(s.contains("create_text_node"));
+        assert!(s.contains("create_effect"));
+        assert!(s.contains("dynamic_val_clone"));
+    }
+
+    #[test]
+    fn test_static_generates_zero_effects() {
+        let ast = parse_rsx(quote! { div(class: "x") { "text" } }).unwrap();
+        let s = ts(generate(&ast));
+        assert!(!s.contains("create_effect"));
     }
 }

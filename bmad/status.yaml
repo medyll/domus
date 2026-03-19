@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 86
-next_action: "Implement S2-03: Dynamic bindings — wire signals into generated DOM"
+progress: 89
+next_action: "Implement S2-04: Wire domus! macro end-to-end with codegen"
 active_role: dev
 
 phases:
