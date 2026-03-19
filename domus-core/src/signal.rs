@@ -90,6 +90,12 @@ impl<T: Clone + 'static> Signal<T> {
             schedule_effect(Rc::clone(effect));
         }
     }
+
+    /// Get the core for testing purposes.
+    #[cfg(test)]
+    pub fn core(&self) -> &Rc<SignalCore> {
+        &self.core
+    }
 }
 
 impl<T> Clone for Signal<T> {
