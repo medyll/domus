@@ -28,10 +28,33 @@ pub fn create_scope(parent: Option<ScopeId>) -> ScopeId {
 }
 
 pub fn dispose_scope(scope_id: ScopeId) {
+    use crate::signal::unsubscribe_effect_from_all;
+
+    // Remove scope and unsubscribe its effects from signals.
     SCOPES.with(|scopes| {
         let mut scopes = scopes.borrow_mut();
-        scopes.remove(&scope_id);
+        if let Some(scope) = scopes.remove(&scope_id) {
+            for eff in scope.effects.iter() {
+                unsubscribe_effect_from_all(eff);
+            }
+        }
     });
+}
+
+/// Create an effect and register it inside the given scope.
+pub fn create_effect_in_scope<F: FnMut() + 'static>(scope_id: ScopeId, f: F) -> Option<Rc<Effect>> {
+    use crate::effect::create_effect;
+
+    let eff = create_effect(f);
+    SCOPES.with(|scopes| {
+        let mut scopes = scopes.borrow_mut();
+        if let Some(scope) = scopes.get_mut(&scope_id) {
+            scope.effects.push(Rc::clone(&eff));
+            Some(eff)
+        } else {
+            None
+        }
+    })
 }
 
 #[cfg(test)]
