@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 89
-next_action: "Implement S2-04: Wire domus! macro end-to-end with codegen"
+progress: 92
+next_action: "Begin Sprint 3: S3-01 — integration test with real WASM build"
 active_role: dev
 
 phases:
@@ -35,7 +35,7 @@ sprints:
       - S1-05
       - S1-06
   - id: 2
-    status: active
+    status: completed
     stories:
       - S2-01
       - S2-02

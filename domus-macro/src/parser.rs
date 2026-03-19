@@ -211,8 +211,26 @@ impl<'a> RustStyleParser<'a> {
                     RsxAttr::Ident(ident)
                 }
                 _ => {
-                    i += 1;
-                    continue;
+                    // Fallback: collect tokens until next top-level comma or end.
+                    // Handles closures like `|_| expr` and other arbitrary expressions.
+                    let start = i;
+                    while i < tokens.len() {
+                        match &tokens[i] {
+                            // Groups are self-contained in proc_macro2 — no depth needed
+                            TokenTree::Group(_) => { i += 1; }
+                            TokenTree::Punct(p) if p.as_char() == ',' => break,
+                            _ => { i += 1; }
+                        }
+                    }
+                    if start == i {
+                        continue;
+                    }
+                    let expr_stream: proc_macro2::TokenStream =
+                        tokens[start..i].iter().cloned().collect();
+                    match parse2::<Expr>(expr_stream) {
+                        Ok(expr) => RsxAttr::Dynamic(expr),
+                        Err(_) => continue,
+                    }
                 }
             };
 

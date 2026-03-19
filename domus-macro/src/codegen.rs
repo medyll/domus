@@ -81,9 +81,23 @@ fn gen_element(tag: &str, attrs: &[(String, RsxAttr)], children: &[RsxNode]) -> 
     let el_id = next_id();
     let el_var: Ident = format_ident!("__el_{}", el_id);
 
+    // Event handler statements (on_* attributes)
+    let event_stmts: Vec<TokenStream> = attrs
+        .iter()
+        .filter(|(name, _)| name.starts_with("on_"))
+        .filter_map(|(name, val)| {
+            if let RsxAttr::Dynamic(expr) = val {
+                Some(gen_event_handler(expr, &el_var, name))
+            } else {
+                None
+            }
+        })
+        .collect();
+
     // Static attribute-setting statements
     let static_attr_stmts: Vec<TokenStream> = attrs
         .iter()
+        .filter(|(name, _)| !name.starts_with("on_"))
         .filter(|(_, v)| !matches!(v, RsxAttr::Dynamic(_)))
         .map(|(name, val)| {
             let attr_val = match val {
@@ -101,9 +115,10 @@ fn gen_element(tag: &str, attrs: &[(String, RsxAttr)], children: &[RsxNode]) -> 
         })
         .collect();
 
-    // Dynamic attribute-binding effects
+    // Dynamic attribute-binding effects (non-event on_ attrs)
     let dynamic_attr_stmts: Vec<TokenStream> = attrs
         .iter()
+        .filter(|(name, _)| !name.starts_with("on_"))
         .filter_map(|(name, val)| {
             if let RsxAttr::Dynamic(expr) = val {
                 Some(gen_dynamic_attr_effect(expr, &el_var, name))
@@ -144,6 +159,7 @@ fn gen_element(tag: &str, attrs: &[(String, RsxAttr)], children: &[RsxNode]) -> 
 
             #(#static_attr_stmts)*
             #(#dynamic_attr_stmts)*
+            #(#event_stmts)*
             #(#child_stmts)*
 
             #el_var
@@ -205,6 +221,54 @@ fn gen_dynamic_attr_effect(expr: &Expr, el_var: &Ident, attr_name: &str) -> Toke
     }
 }
 
+/// Generate a wasm-bindgen Closure for an event handler attribute.
+/// `on_click` → `set_onclick(MouseEvent)`, `on_input` → `set_oninput(InputEvent)`, etc.
+fn gen_event_handler(handler_expr: &Expr, el_var: &Ident, attr_name: &str) -> TokenStream {
+    let handler_id = next_id();
+    let handler_var: Ident = format_ident!("__handler_{}", handler_id);
+    let el_clone: Ident = format_ident!("{}_ec", el_var);
+
+    // Map on_X → (web_sys event type, setter method)
+    let event_name = attr_name.trim_start_matches("on_");
+    let (event_type_str, setter_str) = event_type_and_setter(event_name);
+    let event_type: proc_macro2::TokenStream = event_type_str.parse().unwrap();
+    let setter_ident: Ident = format_ident!("{}", setter_str);
+
+    let idents = analyze_expr(handler_expr);
+    let clone_stmts = generate_clones(&idents);
+    let cloned_handler = substitute_clones(handler_expr, &idents);
+
+    quote! {
+        {
+            #clone_stmts
+            let #el_clone = #el_var.clone();
+            let #handler_var = wasm_bindgen::closure::Closure::<dyn Fn(#event_type)>::new(
+                #cloned_handler
+            );
+            #el_clone.#setter_ident(Some(
+                wasm_bindgen::JsCast::unchecked_ref(#handler_var.as_ref())
+            ));
+            #handler_var.forget();
+        }
+    }
+}
+
+/// Map event name to `(web_sys type path, HtmlElement setter method)`.
+fn event_type_and_setter(event: &str) -> (String, String) {
+    let setter = format!("set_on{}", event);
+    let ty = match event {
+        "click" | "dblclick" | "mousedown" | "mouseup" | "mouseover" | "mouseout" => {
+            "web_sys::MouseEvent"
+        }
+        "input" => "web_sys::InputEvent",
+        "keydown" | "keyup" | "keypress" => "web_sys::KeyboardEvent",
+        "submit" => "web_sys::SubmitEvent",
+        "focus" | "blur" => "web_sys::FocusEvent",
+        _ => "web_sys::Event",
+    };
+    (ty.to_string(), setter)
+}
+
 // ---------------------------------------------------------------------------
 // Expression analysis and clone substitution
 // ---------------------------------------------------------------------------
@@ -247,6 +311,14 @@ fn collect_idents(expr: &Expr, vars: &mut Vec<String>) {
         }
         Expr::Paren(p) => collect_idents(&p.expr, vars),
         Expr::Reference(r) => collect_idents(&r.expr, vars),
+        Expr::Closure(c) => collect_idents(&c.body, vars),
+        Expr::Block(b) => {
+            for stmt in &b.block.stmts {
+                if let syn::Stmt::Expr(e) = stmt {
+                    collect_idents(e, vars);
+                }
+            }
+        }
         _ => {}
     }
 }
@@ -458,5 +530,64 @@ mod tests {
         let ast = parse_rsx(quote! { div(class: "x") { "text" } }).unwrap();
         let s = ts(generate(&ast));
         assert!(!s.contains("create_effect"));
+    }
+
+    // --- Event handler tests ---
+
+    #[test]
+    fn test_click_handler_generates_closure() {
+        let ast = parse_rsx(quote! {
+            button(on_click: |_| signal.set(42)) { "Click" }
+        })
+        .unwrap();
+        let s = ts(generate(&ast));
+        assert!(s.contains("Closure"));
+        assert!(s.contains("set_onclick"));
+        assert!(s.contains("forget"));
+    }
+
+    #[test]
+    fn test_input_handler_uses_input_event_type() {
+        let ast = parse_rsx(quote! {
+            input(on_input: |_| count.set(1))
+        })
+        .unwrap();
+        let s = ts(generate(&ast));
+        assert!(s.contains("set_oninput"));
+        assert!(s.contains("InputEvent"));
+    }
+
+    #[test]
+    fn test_multiple_handlers_on_same_element() {
+        let ast = parse_rsx(quote! {
+            div(on_click: |_| a.set(1), on_mouseout: |_| b.set(2)) { }
+        })
+        .unwrap();
+        let s = ts(generate(&ast));
+        assert!(s.contains("set_onclick"));
+        assert!(s.contains("set_onmouseout"));
+        assert_eq!(s.matches("Closure").count(), 2);
+    }
+
+    #[test]
+    fn test_handler_captures_state_via_clone() {
+        let ast = parse_rsx(quote! {
+            button(on_click: |_| signal.set(99)) { "Go" }
+        })
+        .unwrap();
+        let s = ts(generate(&ast));
+        assert!(s.contains("signal_clone"));
+        assert!(s.contains("clone ()"));
+    }
+
+    #[test]
+    fn test_event_handler_does_not_generate_set_attribute() {
+        let ast = parse_rsx(quote! {
+            button(on_click: |_| {}) { "x" }
+        })
+        .unwrap();
+        let s = ts(generate(&ast));
+        assert!(!s.contains("set_attribute"));
+        assert!(s.contains("set_onclick"));
     }
 }
