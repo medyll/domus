@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 75
-next_action: "Implement S2-01: Create RSX parser for domus! macro"
+progress: 80
+next_action: "Refine S2-01 parser: HTML attribute parsing and edge cases"
 active_role: dev
 
 phases:
@@ -35,7 +35,7 @@ sprints:
       - S1-05
       - S1-06
   - id: 2
-    status: planned
+    status: active
     stories:
       - S2-01
       - S2-02

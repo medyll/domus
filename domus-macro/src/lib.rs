@@ -1,12 +1,24 @@
 //! Procedural macros for Domus.
 
-use proc_macro::TokenStream;
+mod parser;
 
-/// A placeholder macro for domus!.
+use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
+
+/// Parse RSX into an AST.
 ///
-/// This macro is currently a stub and will be implemented in later stories.
+/// Supports both Rust-style (`div { }`) and HTML-style (`<div></div>`) syntax.
+/// Transforms macro input into a reactive component representation.
 #[proc_macro]
 pub fn domus(input: TokenStream) -> TokenStream {
-    // Return input unchanged for now.
-    input
+    let input2 = TokenStream2::from(input);
+    match parser::parse_rsx(input2) {
+        Ok(ast) => {
+            // For now, return a debug representation
+            // Later, this will codegen component initialization
+            let debug_output = format!("/* RSX AST: {:?} */", ast);
+            debug_output.parse().unwrap_or_else(|_| TokenStream::new())
+        }
+        Err(e) => e.to_compile_error().into(),
+    }
 }
