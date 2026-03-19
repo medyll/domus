@@ -2,16 +2,16 @@
 project: Domus
 phase: development
 progress: 100
-next_action: "Sprint 5 remaining: S5-02 (Show/Hide), S5-03 (Portal) — or release prep"
+next_action: "All sprints complete — 116 tests passing. Begin release prep or Sprint 6."
 active_role: dev
 
 phases:
   - name: planning
     status: done
   - name: development
-    status: in_progress
+    status: done
   - name: testing
-    status: upcoming
+    status: in_progress
   - name: release
     status: upcoming
 
@@ -50,7 +50,7 @@ sprints:
     stories:
       - S4-01
   - id: 5
-    status: active
+    status: completed
     stories:
       - S5-01
       - S5-02
