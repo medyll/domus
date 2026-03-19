@@ -1,5 +1,6 @@
 //! Procedural macros for Domus.
 
+mod codegen;
 mod parser;
 
 use proc_macro::TokenStream;
