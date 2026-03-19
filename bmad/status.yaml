@@ -1,8 +1,8 @@
 # BMAD Status
 project: Domus
 phase: development
-progress: 92
-next_action: "Begin Sprint 3: S3-01 — integration test with real WASM build"
+progress: 95
+next_action: "Sprint 4: S4-01 — CLI tooling and wasm-pack build integration"
 active_role: dev
 
 phases:
@@ -42,7 +42,7 @@ sprints:
       - S2-03
       - S2-04
   - id: 3
-    status: planned
+    status: completed
     stories:
       - S3-01
   - id: 4
