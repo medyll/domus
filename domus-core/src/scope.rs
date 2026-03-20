@@ -176,4 +176,84 @@ mod tests {
         assert_eq!(signal1.core().subscribers.borrow().len(), 0);
         assert_eq!(signal2.core().subscribers.borrow().len(), 0);
     }
+
+    #[test]
+    fn stability_under_load() {
+        // Test that the system remains stable under many signals and effects.
+        // Create 50 signals and 50 effects, verify execution counts.
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        use crate::effect::create_effect as crate_effect;
+
+        let num_signals = 50;
+        let signals = (0..num_signals).map(|_| signal(0)).collect::<Vec<_>>();
+        let execution_counts = (0..num_signals).map(|_| Rc::new(RefCell::new(0))).collect::<Vec<_>>();
+
+        // Create effects that read their corresponding signal
+        let _effects = signals
+            .iter()
+            .zip(&execution_counts)
+            .map(|(sig, count)| {
+                let sig = sig.clone();
+                let count = Rc::clone(count);
+                crate_effect(move || {
+                    let _ = sig.get();
+                    *count.borrow_mut() += 1;
+                })
+            })
+            .collect::<Vec<_>>();
+
+        // All effects should have executed once (initial)
+        for count in &execution_counts {
+            assert_eq!(*count.borrow(), 1);
+        }
+
+        // Update all signals and verify they changed
+        for (i, sig) in signals.iter().enumerate() {
+            sig.set((i * 10) as u32);
+        }
+
+        // After all updates, each effect should have run twice (initial + one update)
+        let total_runs: usize = execution_counts.iter().map(|c| *c.borrow()).sum();
+        assert_eq!(total_runs, num_signals * 2);
+    }
+
+    #[test]
+    fn signal_survives_scope_disposal() {
+        // A signal created outside a scope should survive scope disposal.
+        use crate::effect::create_effect;
+
+        let signal_outside = signal(42);
+        let scope = create_scope(None);
+
+        let sig = signal_outside.clone();
+        let _ = create_effect_in_scope(scope, move || {
+            sig.get();
+        });
+
+        // Signal has subscriber
+        assert_eq!(signal_outside.core().subscribers.borrow().len(), 1);
+
+        // Dispose scope
+        dispose_scope(scope);
+
+        // Effect is unsubscribed, but signal still works
+        assert_eq!(signal_outside.core().subscribers.borrow().len(), 0);
+        assert_eq!(signal_outside.get(), 42);
+
+        // Can still create new effects that use this signal
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        let runs = Rc::new(RefCell::new(0));
+        let sig = signal_outside.clone();
+        let count = Rc::clone(&runs);
+        create_effect(move || {
+            let _ = sig.get();
+            *count.borrow_mut() += 1;
+        });
+        assert_eq!(*runs.borrow(), 1);
+
+        signal_outside.set(99);
+        assert_eq!(*runs.borrow(), 2);
+    }
 }

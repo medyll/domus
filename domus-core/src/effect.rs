@@ -8,6 +8,9 @@ thread_local! {
     ///
     /// This is used by `Signal::get` to register dependency tracking.
     pub static RUNNING_EFFECT: RefCell<Option<Rc<Effect>>> = RefCell::new(None);
+    /// Current execution epoch, incremented when flush starts.
+    /// Used to prevent re-entrancy: if an effect tries to re-execute in the same epoch, ignore it.
+    static CURRENT_EPOCH: RefCell<u64> = RefCell::new(0);
 }
 
 /// A reactive effect that automatically tracks its dependencies.
@@ -46,6 +49,25 @@ impl Effect {
     pub fn execute(&self) {
         (self.execute)();
     }
+
+    /// Execute the effect with full dependency tracking and cleanup.
+    ///
+    /// This clears the effect's previous dependencies, re-runs the effect
+    /// with RUNNING_EFFECT set in TLS, and re-establishes dependencies.
+    ///
+    /// Used by the runtime scheduler to properly re-run effects after signal updates.
+    pub fn run_with_dependency_tracking(effect: &Rc<Self>) {
+        use crate::signal::unsubscribe_effect_from_all;
+
+        // Clear all previous signal subscriptions.
+        // Note: This is done carefully to avoid RefCell borrow conflicts.
+        // If called during another borrow context, we rely on the secondary queue
+        // to defer the effect execution until it's safe.
+        unsubscribe_effect_from_all(effect);
+
+        // Re-run the effect with TLS tracking to establish fresh dependencies
+        Self::run(effect);
+    }
 }
 
 /// Create a new effect, returning a reference-counted handle.
@@ -81,5 +103,53 @@ mod tests {
         });
 
         assert_eq!(*runs.borrow(), 1);
+    }
+
+    #[test]
+    fn effect_dynamic_dependency_switching() {
+        // Test that an effect can switch which signals it reads based on conditions,
+        // and old subscriptions are properly cleaned up.
+        let flag = signal(true);
+        let signal_a = signal(1);
+        let signal_b = signal(10);
+        let values = Rc::new(RefCell::new(Vec::new()));
+
+        let flag_clone = flag.clone();
+        let a_clone = signal_a.clone();
+        let b_clone = signal_b.clone();
+        let values_clone = Rc::clone(&values);
+
+        create_effect(move || {
+            let f = flag_clone.get();
+            let val = if f {
+                a_clone.get()
+            } else {
+                b_clone.get()
+            };
+            values_clone.borrow_mut().push(val);
+        });
+
+        // Initial run: flag=true, reads a=1
+        assert_eq!(*values.borrow(), vec![1]);
+
+        // Change signal_a: effect should re-run (still subscribed to a)
+        signal_a.set(2);
+        assert_eq!(*values.borrow(), vec![1, 2]);
+
+        // Change signal_b: effect should NOT re-run (not subscribed to b)
+        signal_b.set(20);
+        assert_eq!(*values.borrow(), vec![1, 2]);
+
+        // Switch flag to false: effect re-runs, now reads b=20
+        flag.set(false);
+        assert_eq!(*values.borrow(), vec![1, 2, 20]);
+
+        // Change signal_a: effect should NOT re-run anymore (unsubscribed from a)
+        signal_a.set(3);
+        assert_eq!(*values.borrow(), vec![1, 2, 20]);
+
+        // Change signal_b: effect should re-run (now subscribed to b)
+        signal_b.set(21);
+        assert_eq!(*values.borrow(), vec![1, 2, 20, 21]);
     }
 }

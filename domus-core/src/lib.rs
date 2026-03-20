@@ -5,11 +5,13 @@
 
 #![warn(missing_docs)]
 
+pub mod computed;
 pub mod effect;
 pub mod runtime;
 pub mod scope;
 pub mod signal;
 
+pub use computed::{computed, Computed};
 pub use effect::{create_effect, Effect};
 pub use runtime::batch;
 pub use scope::{create_scope, dispose_scope, ScopeId};

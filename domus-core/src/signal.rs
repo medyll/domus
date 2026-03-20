@@ -78,7 +78,9 @@ impl<T: Clone + 'static> Signal<T> {
     /// Set a new value, notifying all subscribers.
     pub fn set(&self, new_val: T) {
         *self.value.borrow_mut() = new_val;
-        for effect in self.core.subscribers.borrow().iter() {
+        // Clone the subscriber list to avoid borrow conflicts when effects re-execute
+        let effects = self.core.subscribers.borrow().clone();
+        for effect in effects.iter() {
             schedule_effect(Rc::clone(effect));
         }
     }
@@ -86,7 +88,9 @@ impl<T: Clone + 'static> Signal<T> {
     /// Mutate the value in place.
     pub fn update<F: FnOnce(&mut T)>(&self, f: F) {
         f(&mut self.value.borrow_mut());
-        for effect in self.core.subscribers.borrow().iter() {
+        // Clone the subscriber list to avoid borrow conflicts when effects re-execute
+        let effects = self.core.subscribers.borrow().clone();
+        for effect in effects.iter() {
             schedule_effect(Rc::clone(effect));
         }
     }
