@@ -28,17 +28,25 @@ thread_local! {
 }
 
 /// Unsubscribe an effect from all known signals. Used by scope disposal.
+///
+/// This is implemented carefully to avoid RefCell borrow conflicts:
+/// we collect the signal cores first, release the registry lock, then clean them.
 pub(crate) fn unsubscribe_effect_from_all(effect: &Rc<Effect>) {
-    SIGNAL_REGISTRY.with(|reg| {
+    // Step 1: Collect live signal cores (release lock before cleaning)
+    let cores = SIGNAL_REGISTRY.with(|reg| {
         let mut reg = reg.borrow_mut();
         // Clean dead entries while iterating
         reg.retain(|w| w.upgrade().is_some());
-        for weak in reg.iter() {
-            if let Some(core) = weak.upgrade() {
-                core.remove_subscriber(effect);
-            }
-        }
+        // Collect live cores
+        reg.iter()
+            .filter_map(|w| w.upgrade())
+            .collect::<Vec<_>>()
     });
+
+    // Step 2: Clean the effect from each signal (outside of registry lock)
+    for core in cores.iter() {
+        core.remove_subscriber(effect);
+    }
 }
 
 /// A reactive signal type.

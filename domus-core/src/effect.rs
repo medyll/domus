@@ -60,9 +60,7 @@ impl Effect {
         use crate::signal::unsubscribe_effect_from_all;
 
         // Clear all previous signal subscriptions.
-        // Note: This is done carefully to avoid RefCell borrow conflicts.
-        // If called during another borrow context, we rely on the secondary queue
-        // to defer the effect execution until it's safe.
+        // This must be done BEFORE setting RUNNING_EFFECT to avoid borrow conflicts.
         unsubscribe_effect_from_all(effect);
 
         // Re-run the effect with TLS tracking to establish fresh dependencies

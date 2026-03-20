@@ -308,6 +308,18 @@ mod tests {
         assert_eq!(*d_runs.borrow(), 3);
     }
 
+    // TODO: Test for re-entrancy prevention currently blocked by RefCell borrow conflicts
+    // when effects write signals from within their closure.
+    // This is an architectural issue: the Effect's closure body borrows f_cell,
+    // and concurrent signal.set() operations create nested borrow conflicts.
+    // Solutions:
+    // 1. Use Rc<Cell<>> instead of Rc<RefCell<>> (but loses interior mutability safety)
+    // 2. Implement a "write-safe" signal API that defers writes outside the effect context
+    // 3. Track active effect closures and defer any signal mutations to post-flush
+    //
+    // For now, the epoch tracking prevents infinite loops even if re-entrancy happens,
+    // so the system is safe but not fully optimized for write-heavy effects.
+
     #[test]
     fn glitch_free_convergence() {
         // Ensure that during a flush generation, dependent values see consistent state.
