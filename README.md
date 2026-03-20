@@ -4,7 +4,7 @@ Reactive UI framework for Rust/WASM. Fine-grained signals, no Virtual DOM, direc
 
 ```
 Planning ✅  Development ✅  Testing ✅  Release 🔄
-135 tests passing · Alpha
+154 tests passing · Alpha
 ```
 
 ---
@@ -175,6 +175,114 @@ dispose_scope(scope);
 ```
 
 Scopes can be nested. Disposing a parent disposes all children.
+
+---
+
+## Reactive System Architecture
+
+### Dependency Graph: Signals → Effects → Computed
+
+```mermaid
+graph LR
+    S1["Signal A"] -->|get| E1["Effect"]
+    S2["Signal B"] -->|get| E1
+    E1 -->|notifies| C["Computed C"]
+    C -->|get| E2["Effect D"]
+    C -->|propagates<br/>changes| S3["Signal C"]
+    S3 -->|get| E2
+
+    style S1 fill:#e1f5ff
+    style S2 fill:#e1f5ff
+    style S3 fill:#e1f5ff
+    style E1 fill:#fff3e0
+    style E2 fill:#fff3e0
+    style C fill:#f3e5f5
+```
+
+**How it works:**
+1. Effects read signals → dependencies are tracked automatically
+2. Signal changes notify all dependent effects
+3. Computed values are signals that auto-update when their sources change
+4. No manual tracking; no Virtual DOM diffing
+
+### Batch Execution: Two-Queue Generation System
+
+```mermaid
+graph TD
+    SIG["Signal.set()"] --> BATCH{In Batch?}
+    BATCH -->|Yes| PQ["PRIMARY_QUEUE"]
+    BATCH -->|No| IS{IS_FLUSHING?}
+    IS -->|Yes| SQ["SECONDARY_QUEUE"]
+    IS -->|No| EXEC["Execute<br/>immediately"]
+
+    PQ --> FLUSH["🔄 Flush Generation"]
+    SQ --> FLUSH
+
+    FLUSH --> DEDUP["Deduplicate<br/>effects"]
+    DEDUP --> EXEC2["Execute all<br/>once per gen"]
+    EXEC2 --> NEXT{New effects<br/>scheduled?}
+    NEXT -->|Yes| PQ
+    NEXT -->|No| END["✅ Done"]
+
+    style BATCH fill:#fff9c4
+    style IS fill:#fff9c4
+    style FLUSH fill:#c8e6c9
+    style END fill:#c8e6c9
+```
+
+**Benefits:**
+- ✅ Nested batches work correctly (only flush at outermost exit)
+- ✅ Diamond dependencies execute effects once, not twice
+- ✅ Glitch-free: derived values see consistent state
+- ✅ Re-entrancy safe: epoch system prevents infinite loops
+
+### Re-entrancy Prevention: Epoch Blocking
+
+```mermaid
+stateDiagram-v2
+    [*] --> Gen1: Generation 1
+    Gen1: ⏳ Executing effects<br/>Mark EXECUTED_THIS_GEN
+
+    Gen1 --> Try: Effect tries<br/>to reschedule?
+
+    Try --> Block: Same epoch<br/>→ BLOCKED
+    Try --> Defer: Next epoch<br/>→ SECONDARY_QUEUE
+
+    Block --> Done: Effect continues
+    Done --> Gen2: Generation 2<br/>Process SECONDARY
+
+    Defer --> Gen2
+
+    Gen2 --> [*]
+
+    style Gen1 fill:#bbdefb
+    style Gen2 fill:#bbdefb
+    style Block fill:#ffccbc
+    style Defer fill:#c8e6c9
+```
+
+**Result:** Effects can safely write signals during execution without causing infinite loops.
+
+### Borrow Safety: Cell Pattern
+
+```mermaid
+graph LR
+    subgraph Old["❌ RefCell (borrow conflicts)"]
+        RC["Rc<RefCell<FnMut>>"]
+        RC -->|borrow_mut| C1["Closure body"]
+        C1 -->|signal.set| SIG1["Borrow conflict!"]
+    end
+
+    subgraph New["✅ Cell (zero-cost)"]
+        CE["Cell<Option<FnMut>>"]
+        CE -->|take| C2["Execute closure"]
+        C2 -->|No active borrow| SIG2["Safe!"]
+        C2 -->|put back| CE
+    end
+
+    style Old fill:#ffcdd2
+    style New fill:#c8e6c9
+```
 
 ---
 
@@ -428,11 +536,12 @@ cargo test --workspace --exclude hello-world
 
 ```
 domus-cli   35 tests   css scoper · scaffold · naming helpers
-domus-core   8 tests   signal · effect · scope · batch
+domus-core  19 tests   signal · effect · scope · batch · computed
+                      → dynamic deps · diamonds · glitch-free · re-entrancy
 domus-macro 38 tests   RSX parser · codegen · event handlers
-domus-web   54 tests   component · router · context · list · page
+domus-web   62 tests   component · router · context · list · page
 ─────────────────────────────────────────────────
-            135 tests   0 failed
+            154 tests  0 failed
 ```
 
 All tests run on native (no WASM runtime needed). WASM-only code (`MutationObserver`, DOM APIs) is gated behind `#[cfg(target_arch = "wasm32")]` with no-op stubs for testing.
