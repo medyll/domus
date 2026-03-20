@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::runtime;
@@ -8,31 +8,30 @@ thread_local! {
     ///
     /// This is used by `Signal::get` to register dependency tracking.
     pub static RUNNING_EFFECT: RefCell<Option<Rc<Effect>>> = RefCell::new(None);
-    /// Current execution epoch, incremented when flush starts.
-    /// Used to prevent re-entrancy: if an effect tries to re-execute in the same epoch, ignore it.
-    static CURRENT_EPOCH: RefCell<u64> = RefCell::new(0);
 }
 
 /// A reactive effect that automatically tracks its dependencies.
 ///
 /// Effects are executed immediately when created, and re-run when any
 /// of their dependent signals update.
+///
+/// Note: Uses Cell instead of RefCell for the closure to avoid borrow conflicts
+/// when effects write signals. Closure state is captured via RefCell in user code.
 pub struct Effect {
-    execute: Box<dyn Fn()>,
+    /// The closure is wrapped in a Cell to avoid RefCell borrow conflicts.
+    /// We use an Option to allow "taking" the closure without holding a borrow.
+    execute_fn: Cell<Option<Box<dyn FnMut()>>>,
+    /// Fallback execute for when closure has been taken
+    executed: Cell<bool>,
 }
 
 impl Effect {
     /// Create a new effect and run it once to establish dependencies.
     pub fn new<F: FnMut() + 'static>(f: F) -> Rc<Self> {
-        // Wrap a `FnMut` in a `Fn` by storing it in a RefCell and calling
-        // it mutably inside a zero-arg `Fn` wrapper. This allows users to
-        // pass closures that mutate captured variables while keeping the
-        // internal API simple (Box<dyn Fn()>).
-        let f_cell = RefCell::new(f);
-        let wrapper = move || {
-            (f_cell.borrow_mut())();
-        };
-        let effect = Rc::new(Self { execute: Box::new(wrapper) });
+        let effect = Rc::new(Self {
+            execute_fn: Cell::new(Some(Box::new(f))),
+            executed: Cell::new(false),
+        });
         Self::run(&effect);
         effect
     }
@@ -40,14 +39,24 @@ impl Effect {
     fn run(effect: &Rc<Self>) {
         // Track the running effect during execution.
         let previous = RUNNING_EFFECT.with(|rt| rt.borrow_mut().replace(Rc::clone(effect)));
-        (effect.execute)();
+
+        // Take the closure out of the Cell, execute it, and put it back.
+        // This avoids holding a borrow while executing, preventing conflicts.
+        if let Some(mut f) = effect.execute_fn.take() {
+            f();
+            effect.execute_fn.set(Some(f));
+        }
+
         // Restore previous running effect (if any).
         RUNNING_EFFECT.with(|rt| *rt.borrow_mut() = previous);
     }
 
     /// Execute the effect once (without changing the TLS context).
     pub fn execute(&self) {
-        (self.execute)();
+        if let Some(mut f) = self.execute_fn.take() {
+            f();
+            self.execute_fn.set(Some(f));
+        }
     }
 
     /// Execute the effect with full dependency tracking and cleanup.
