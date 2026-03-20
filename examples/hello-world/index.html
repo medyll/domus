@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domus — Hello World</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    h1   { color: #2d6be4; }
+    section { border: 1px solid #ddd; border-radius: 8px; padding: 1.2rem; margin: 1rem 0; }
+    h2   { margin-top: 0; font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; color: #555; }
+    button { padding: .35rem .8rem; margin: .2rem; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #f0f4ff; }
+    #counter-display { font-size: 2rem; font-weight: bold; margin: .5rem .8rem; vertical-align: middle; }
+    .btn-row { display: flex; align-items: center; gap: .4rem; }
+    .input-row { display: flex; gap: .4rem; margin-bottom: .6rem; }
+    input[type=text] { flex: 1; padding: .35rem .6rem; border: 1px solid #ccc; border-radius: 4px; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; justify-content: space-between; align-items: center; padding: .3rem 0; border-bottom: 1px solid #eee; }
+    li:last-child { border-bottom: none; }
+    .del-btn { font-size: .75rem; color: #c00; border-color: #c00; padding: .2rem .5rem; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import init from "./pkg/hello_world.js";
+    init();
+  </script>
+</body>
+</html>

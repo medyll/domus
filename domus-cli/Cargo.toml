@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 domus-core = { path = "../domus-core" }
+clap = { version = "4", features = ["derive"] }

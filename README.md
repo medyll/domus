@@ -1,246 +1,191 @@
-# Domus: Fine-Grained Reactivity Framework for Rust/WASM
+# Domus
 
-> A web framework that eliminates the Virtual DOM in favor of **direct DOM manipulation** coupled with **automatic dependency tracking**.
+A reactive UI framework for Rust/WASM — fine-grained reactivity, no Virtual DOM.
 
-## 🎯 Vision
-
-**Domus** is designed for developers who demand:
-- **Deterministic Performance** — O(1) updates, no diffing algorithm
-- **Type Safety** — Routes, props, and assets type-checked at compile time
-- **Clarity** — Convention-over-configuration prevents "analysis paralysis"
-- **Simplicity** — No VDOM means the code you write is the code that executes
-
-## 📊 Project Status
+> **Status: Alpha** — all 6 MVP sprints complete, 135 tests passing.
 
 ```
-Planning:     ████████████░░░░░░░░░░░░░░░░░░░░░░ 35% Complete
-Development:  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% (Upcoming)
-Testing:      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% (Upcoming)
-Release:      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% (Upcoming)
+┌─────────────┐   RSX macros    ┌──────────────┐   signals/effects   ┌──────────────┐
+│ domus-macro │ ─────────────►  │  domus-web   │ ──────────────────► │  domus-core  │
+│  (proc-mac) │                 │  (DOM + comp)│                     │  (reactive)  │
+└─────────────┘                 └──────────────┘                     └──────────────┘
+                                       │
+                                  domus-cli
+                               (scaffold + CSS)
 ```
 
-**Artifacts:**
-- ✅ Product Requirements (PROJECT.md)
-- ✅ Architecture Plan (bmad/artifacts/plan-arch.md)
-- ✅ Technical Specification (bmad/artifacts/plan-spec.md)
-- 🔄 CLI Specification (in progress)
-- 🔄 Test Strategy (in progress)
+## Features
 
-## 🏗️ Architecture
+| Feature | Crate | Status |
+|---------|-------|--------|
+| Fine-grained signals + effects | `domus-core` | ✅ |
+| Scope-based effect disposal | `domus-core` | ✅ |
+| Batched updates | `domus-core` | ✅ |
+| RSX parser (Rust-style + HTML-style) | `domus-macro` | ✅ |
+| Reactive code generation via `quote!` | `domus-macro` | ✅ |
+| `DomusComponent` trait | `domus-web` | ✅ |
+| URL pattern router with params | `domus-web` | ✅ |
+| Keyed list reconciliation (O(N)) | `domus-web` | ✅ |
+| TypeId-based Context API | `domus-web` | ✅ |
+| MutationObserver scope disposal | `domus-web` | ✅ |
+| Scoped CSS (FNV-1a hash) | `domus-cli` | ✅ |
+| Project scaffolding CLI (`clap`) | `domus-cli` | ✅ |
 
-```
-Application Layer
-  (Pages + Components)
-         ↓
-UI Framework Layer
-  (Router, Context, For<T>)
-         ↓
-Macro Layer
-  (domus! code generation)
-         ↓
-Reactive Core
-  (Signal, Effect, TLS Runtime)
-         ↓
-DOM Bridge
-  (web-sys, wasm-bindgen)
-```
-
-## 🚀 Quick Start (When Ready)
+## Quick Start
 
 ```bash
-# Create new project
+cargo install domus-cli
+
 domus new project my-app
+cd my-app
+wasm-pack build --target web
+npx serve .
+```
 
-# Add a component
-domus add component Button
-
-# Add a page
+```bash
+domus add component NavBar
 domus add page Dashboard
-
-# Start development server
-domus dev
-
-# Build for production
-domus build --release
 ```
 
-## 💡 Key Concepts
+## Workspace
 
-### Signals: Reactive State
-```rust
-let count = signal(0);
-count.set(42);  // Automatically notifies subscribers
+```
+domus/
+├── domus-core/          # Signals, effects, scopes, batching
+├── domus-macro/         # RSX proc-macro + code generator
+├── domus-web/           # Component, router, context, list, disposal
+├── domus-cli/           # scaffold + CSS scoper
+└── examples/
+    └── hello-world/     # Counter + todo list WASM demo
 ```
 
-### Effects: Auto-Tracked Reactions
+## Core API
+
+### Signals
+
 ```rust
+use domus_core::signal::signal;
+
+let (value, set_value) = signal(0i32);
+value.get();          // read — tracks dependencies automatically
+set_value.set(42);    // write — notifies all subscribers
+```
+
+### Effects
+
+```rust
+use domus_core::effect::create_effect;
+
 create_effect(move || {
-    println!("Count is now: {}", count.get());
+    // re-runs whenever any signal read inside changes
+    web_sys::console::log_1(&value.get().into());
 });
-// Runs automatically whenever count changes
 ```
 
-### Components: Traits Define Structure
-```rust
-pub trait DomusComponent {
-    type Props;
-    type State;
+### Batching
 
-    fn setup(props: Self::Props) -> Self::State;
-    fn render(state: &Self::State) -> DomusNode;
-}
+```rust
+use domus_core::batch::batch;
+
+batch(|| {
+    set_a.set(1);
+    set_b.set(2);
+    // subscribers notified once, after the batch
+});
 ```
 
-### domus! Macro: Declarative UI
+### Scopes (memory management)
+
 ```rust
-domus! {
-    div(class: "counter") {
-        p { "Count: " {count} }
-        button(on_click: |_| count.set(count.get() + 1)) {
-            "Increment"
-        }
+use domus_core::scope::{create_scope, dispose_scope, create_effect_in_scope};
+
+let scope = create_scope(None);
+create_effect_in_scope(scope, move || { /* reactive work */ });
+dispose_scope(scope); // unsubscribes all effects — no leaks
+```
+
+### Components
+
+```rust
+use domus_web::component::{DomusComponent, DomusNode};
+
+pub struct Counter;
+
+impl DomusComponent for Counter {
+    type Props = ();
+    type State = CounterState;
+
+    fn setup(_: ()) -> CounterState {
+        CounterState { count: signal(0).0 }
+    }
+
+    fn render(state: &CounterState) -> DomusNode {
+        // build and return a web_sys::Element
     }
 }
 ```
 
-## 📁 Project Structure
+### Router
 
-```
-domus/
-├── domus-core/      # Signal, Effect, TLS Runtime
-├── domus-macro/     # RSX parser and code generation
-├── domus-web/       # Component system, Router, DOM bindings
-├── domus-cli/       # Code generation tool
-├── examples/        # Working example applications
-└── bmad/           # Project orchestration artifacts
-    ├── status.yaml
-    └── artifacts/
-        ├── plan-arch.md    # Architecture plan
-        ├── plan-spec.md    # Technical specification
-        └── stories/        # Implementation stories
-```
-
-## 📚 Documentation
-
-- **[PROJECT.md](./PROJECT.md)** — Complete framework specification
-- **[Architecture Plan](./bmad/artifacts/plan-arch.md)** — System design and integration points
-- **[Technical Spec](./bmad/artifacts/plan-spec.md)** — API signatures and detailed behavior
-
-## 🛠️ Development Roadmap
-
-### MVP 1: Reactive Core ⏳
-- [ ] `Signal<T>` implementation
-- [ ] `Effect` and TLS-based dependency tracking
-- [ ] Basic WASM compilation
-- **Estimated:** 2-3 weeks
-
-### MVP 2: Rendering ⏳
-- [ ] Basic `domus!` macro (static + dynamic text)
-- [ ] Element creation via `web-sys`
-- [ ] Event listeners
-- **Estimated:** 2-3 weeks
-
-### MVP 3: Components ⏳
-- [ ] `DomusComponent` trait
-- [ ] Props and State separation
-- [ ] Component composition
-- **Estimated:** 2-3 weeks
-
-### MVP 4: Routing ⏳
-- [ ] `DomusPage` trait
-- [ ] URL pattern matching
-- [ ] Type-safe navigation
-- **Estimated:** 2 weeks
-
-### MVP 5: Advanced Features ⏳
-- [ ] `For<T>` list component
-- [ ] Context API
-- [ ] Scoped CSS
-- [ ] CLI tool
-- **Estimated:** 3-4 weeks
-
-### MVP 6: Production Ready ⏳
-- [ ] Memory management & disposal
-- [ ] Batching scheduler
-- [ ] Error boundaries
-- [ ] Testing utilities
-- **Estimated:** 2-3 weeks
-
-## 🎨 Design Philosophy
-
-### Convention Over Configuration
-Every file has a designated place. Decisions are made for you:
-- Components go in `src/components/`
-- Pages go in `src/pages/`
-- Styles are automatically scoped
-
-### Three Golden Rules
-1. **No Local Mut** — All state must be Signals (enables reactivity)
-2. **Explicit Keys** — Lists require unique keys (O(1) updates)
-3. **Folder-as-Module** — One component per folder (auto scoped CSS)
-
-### No VDOM
-- Direct DOM manipulation via `web-sys`
-- O(1) updates (no tree diffing)
-- Smaller WASM bundle
-- Faster execution
-
-## 📈 Performance Targets
-
-| Metric | Target | How |
-|--------|--------|-----|
-| Initial WASM Size | < 200KB gzipped | No diffing algorithm |
-| Single State Update | < 1ms | O(1) effect execution |
-| List of 1000 items | < 100ms | Surgical DOM updates |
-| 60 FPS animations | Guaranteed | Batching + scheduling |
-
-## 🔒 Type Safety Guarantees
-
-✅ **Routes:** `navigate::<UserPage>(UserProps { id: 42 })` — type-checked
-✅ **Props:** Wrong prop type → compiler error
-✅ **Assets:** `asset!("missing.png")` → compile error if file missing
-✅ **State:** Cannot mutate in `render()` → compiler error
-✅ **Signals:** Must explicitly clone or move — no hidden references
-
-## 🧪 Testing Strategy
-
-**Headless Testing:** Test Signal state transitions without a browser
 ```rust
-#[test]
-fn test_counter() {
-    let count = signal(0);
-    let mut runs = 0;
+use domus_web::router::Router;
 
-    let count_clone = count.clone();
-    create_effect(move || {
-        assert_eq!(count_clone.get(), 42);
-        runs += 1;
-    });
+let mut router: Router<fn(&HashMap<String, String>)> = Router::new();
+router.register("/users/:id", handle_user);
+router.register("/posts/*", handle_posts);
 
-    count.set(42);
-    assert_eq!(runs, 2);
+if let Some((handler, params)) = router.match_route("/users/42") {
+    // params["id"] == "42"
 }
 ```
 
-## 🤝 Contributing
+### Context
 
-This project is in active development. See [bmad/status.yaml](./bmad/status.yaml) for current progress.
+```rust
+use domus_web::context::{provide_context, use_context};
 
-**To get involved:**
-1. Review [PROJECT.md](./PROJECT.md) for overall vision
-2. Check [bmad/artifacts/](./bmad/artifacts/) for detailed specs
-3. Look at implementation stories in [bmad/artifacts/stories/](./bmad/artifacts/stories/)
+provide_context(AppConfig { theme: "dark".into() });
 
-## 📄 License
+// anywhere in the tree:
+let config = use_context::<AppConfig>().unwrap();
+```
+
+### Scoped CSS
+
+```rust
+use domus_cli::css_scoper::{generate_scope_hash, scope_css};
+
+let css = ".btn { color: red; }";
+let hash = generate_scope_hash("src/Button.rs", css);
+let scoped = scope_css(css, &hash);
+// → [data-domus="a3f2b1c0"] .btn { color: red; }
+```
+
+## hello-world example
+
+```bash
+cd examples/hello-world
+wasm-pack build --target web
+npx serve .
+# Open http://localhost:3000
+```
+
+Demonstrates: reactive counter, dynamic todo list, event handlers, scope markers.
+
+## Tests
+
+```bash
+cargo test --workspace --exclude hello-world
+# 135 tests: 35 cli · 8 core · 38 macro · 54 web
+```
+
+## Design Philosophy
+
+- **No VDOM** — direct `web_sys` DOM manipulation, O(1) signal updates
+- **Scoped by default** — CSS scoped via FNV-1a hash, effects scoped via `ScopeId`
+- **Convention over configuration** — components in `src/components/`, pages in `src/pages/`
+- **Pure Rust** — no JS build step for the framework itself
+
+## License
 
 MIT
-
-## 👨‍💻 Author
-
-Built with ❤️ and TDAH-friendly structure by the Domus team.
-
----
-
-**Status:** Pre-alpha (Planning phase)
-**Last Updated:** 2026-03-19
-**Next Milestone:** Begin MVP 1 (domus-core crate)

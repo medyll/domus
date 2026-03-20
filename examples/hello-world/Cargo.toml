@@ -1,0 +1,17 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+domus-web = { path = "../../domus-web" }
+domus-core = { path = "../../domus-core" }
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [
+    "Window", "Document", "Element", "Node", "HtmlElement",
+    "HtmlButtonElement", "HtmlInputElement", "MouseEvent", "Event",
+    "console",
+] }

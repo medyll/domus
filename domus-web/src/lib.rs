@@ -4,6 +4,7 @@
 
 pub mod component;
 pub mod context;
+pub mod disposal;
 pub mod list;
 pub mod page;
 pub mod router;
@@ -13,5 +14,5 @@ pub use router::{Router, RoutePattern};
 
 /// Initialize the Domus runtime. Call once from `wasm_bindgen(start)`.
 pub fn init() {
-    // Initialization hook — reserved for future console_error_panic_hook setup.
+    disposal::init_disposal_observer();
 }

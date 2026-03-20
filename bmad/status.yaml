@@ -2,8 +2,8 @@
 project: Domus
 phase: development
 progress: 100
-next_action: "All sprints complete — 116 tests passing. Begin release prep or Sprint 6."
-active_role: dev
+next_action: "Release prep complete. Run release checklist: cargo clippy, wasm-pack build hello-world, tag v0.1.0-alpha, cargo publish."
+active_role: scrum
 
 phases:
   - name: planning
@@ -11,9 +11,9 @@ phases:
   - name: development
     status: done
   - name: testing
-    status: in_progress
+    status: done
   - name: release
-    status: upcoming
+    status: in_progress
 
 artifacts:
   prd: done
@@ -56,7 +56,7 @@ sprints:
       - S5-02
       - S5-03
   - id: 6
-    status: planned
+    status: completed
     stories:
       - S6-01
       - S6-02
