@@ -1,9 +1,11 @@
 # BMAD Status
 project: Domus
-phase: development
-progress: 100
-next_action: "Release prep complete. Run release checklist: cargo clippy, wasm-pack build hello-world, tag v0.1.0-alpha, cargo publish."
-active_role: scrum
+phase: release
+progress: 85
+active_role: architect
+next_action: "Execute release checklist: run cargo clippy, add rustdoc to public items, wasm-pack build hello-world, update Cargo.toml metadata (description/license/repository), swap path deps to versioned deps, then tag v0.1.0-alpha."
+next_command: "bmad continue"
+next_role: developer
 
 phases:
   - name: planning
@@ -15,6 +17,41 @@ phases:
   - name: release
     status: in_progress
 
+release_checklist:
+  code_quality:
+    - item: "135 tests passing"
+      done: true
+    - item: "cargo build --workspace --exclude hello-world"
+      done: true
+    - item: "cargo clippy --workspace --exclude hello-world -- -D warnings"
+      done: false
+  documentation:
+    - item: "README.md updated"
+      done: true
+    - item: "CHANGELOG.md written"
+      done: true
+    - item: "examples/hello-world/README.md"
+      done: true
+    - item: "Inline rustdoc on all public items"
+      done: false
+  wasm_build:
+    - item: "wasm-pack build --target web (hello-world)"
+      done: false
+    - item: "Manual browser verification"
+      done: false
+  crate_metadata:
+    - item: "Cargo.toml description/license/repository on all crates"
+      done: false
+    - item: "Swap path deps to versioned deps before publish"
+      done: false
+  git:
+    - item: "All changes committed"
+      done: false
+    - item: "Tag v0.1.0-alpha"
+      done: false
+    - item: "Push tag"
+      done: false
+
 artifacts:
   prd: done
   architecture: done
@@ -23,41 +60,36 @@ artifacts:
   stories: done
   cli-spec: done
   test-strategy: done
+  release-checklist: in_progress
 
 sprints:
   - id: 1
     status: completed
-    stories:
-      - S1-01
-      - S1-02
-      - S1-03
-      - S1-04
-      - S1-05
-      - S1-06
+    stories: [S1-01, S1-02, S1-03, S1-04, S1-05, S1-06]
   - id: 2
     status: completed
-    stories:
-      - S2-01
-      - S2-02
-      - S2-03
-      - S2-04
+    stories: [S2-01, S2-02, S2-03, S2-04]
   - id: 3
     status: completed
-    stories:
-      - S3-01
+    stories: [S3-01]
   - id: 4
     status: completed
-    stories:
-      - S4-01
+    stories: [S4-01]
   - id: 5
     status: completed
-    stories:
-      - S5-01
-      - S5-02
-      - S5-03
+    stories: [S5-01, S5-02, S5-03]
   - id: 6
     status: completed
-    stories:
-      - S6-01
-      - S6-02
-      - S6-03
+    stories: [S6-01, S6-02, S6-03]
+
+crates:
+  - domus-core
+  - domus-macro
+  - domus-web
+  - domus-cli
+
+publish_order:
+  - domus-core
+  - domus-macro
+  - domus-web
+  - domus-cli
