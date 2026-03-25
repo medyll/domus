@@ -1,7 +1,7 @@
 [workspace]
 members = [
-  "domus-core",
-  "domus-macro",
-  "domus-web",
-  "domus-cli",
+  "domius-core",
+  "domius-macro",
+  "domius-web",
+  "domius-cli",
 ]

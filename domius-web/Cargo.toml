@@ -1,5 +1,5 @@
 [package]
-name = "domus-web"
+name = "domius-web"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-domus-core = { path = "../domus-core" }
+domius-core = { path = "../domius-core" }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Node"] }

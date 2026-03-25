@@ -7,7 +7,7 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Parser)]
-#[command(name = "domus", about = "Domus project CLI")]
+#[command(name = "domius", about = "Domius project CLI")]
 struct Args {
     #[command(subcommand)]
     command: Commands,
@@ -15,7 +15,7 @@ struct Args {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Create a new Domus project
+    /// Create a new Domius project
     New {
         #[command(subcommand)]
         what: NewCommands,
@@ -29,7 +29,7 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum NewCommands {
-    /// Scaffold a new Domus project
+    /// Scaffold a new Domius project
     Project { name: String },
 }
 

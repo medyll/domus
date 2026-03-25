@@ -1,6 +1,6 @@
-//! Scoped CSS transformer for Domus components.
+//! Scoped CSS transformer for Domius components.
 //!
-//! Each component gets a unique `data-domus-{hash}` attribute. This module:
+//! Each component gets a unique `data-domius-{hash}` attribute. This module:
 //! 1. Generates a short deterministic hash from (path, content)
 //! 2. Transforms CSS selectors to scoped versions
 //!
@@ -12,8 +12,8 @@
 //!
 //! **Output** (with hash `"a3f2"`):
 //! ```css
-//! [data-domus="a3f2"] .btn { color: red; }
-//! [data-domus="a3f2"] .icon { width: 16px; }
+//! [data-domius="a3f2"] .btn { color: red; }
+//! [data-domius="a3f2"] .icon { width: 16px; }
 //! ```
 
 // ---------------------------------------------------------------------------
@@ -45,14 +45,14 @@ pub fn generate_scope_hash(path: &str, content: &str) -> String {
 
 /// Scope attribute selector inserted before each rule's selectors.
 pub fn scope_attr(hash: &str) -> String {
-    format!("[data-domus=\"{}\"]", hash)
+    format!("[data-domius=\"{}\"]", hash)
 }
 
 /// Transform `css` so every rule is scoped to `scope_hash`.
 ///
 /// Handles:
 /// - Single and multiple rules
-/// - Multiple comma-separated selectors: `.a, .b { }` → `[data-domus=…] .a, [data-domus=…] .b { }`
+/// - Multiple comma-separated selectors: `.a, .b { }` → `[data-domius=…] .a, [data-domius=…] .b { }`
 /// - `@media` / `@keyframes` blocks (passed through unchanged — not scoped)
 /// - Comments stripped to avoid misparses
 ///
@@ -144,7 +144,7 @@ pub fn scope_css(css: &str, scope_hash: &str) -> String {
 
 /// Prefix every selector in a comma-separated selector list with `attr`.
 ///
-/// `.a, .b` → `[data-domus="x"] .a, [data-domus="x"] .b`
+/// `.a, .b` → `[data-domius="x"] .a, [data-domius="x"] .b`
 fn scope_selector_list(selectors: &str, attr: &str) -> String {
     selectors
         .split(',')
@@ -211,7 +211,7 @@ mod tests {
     fn test_scope_single_rule() {
         let css = ".btn { color: red; }";
         let scoped = scope_css(css, "abc1");
-        assert!(scoped.contains("[data-domus=\"abc1\"] .btn"));
+        assert!(scoped.contains("[data-domius=\"abc1\"] .btn"));
         assert!(scoped.contains("color: red;"));
     }
 
@@ -219,31 +219,31 @@ mod tests {
     fn test_scope_multiple_rules() {
         let css = ".btn { color: red; } .icon { width: 16px; }";
         let scoped = scope_css(css, "abc1");
-        assert!(scoped.contains("[data-domus=\"abc1\"] .btn"));
-        assert!(scoped.contains("[data-domus=\"abc1\"] .icon"));
+        assert!(scoped.contains("[data-domius=\"abc1\"] .btn"));
+        assert!(scoped.contains("[data-domius=\"abc1\"] .icon"));
     }
 
     #[test]
     fn test_scope_comma_separated_selectors() {
         let css = ".btn, .icon { display: flex; }";
         let scoped = scope_css(css, "x1y2");
-        assert!(scoped.contains("[data-domus=\"x1y2\"] .btn"));
-        assert!(scoped.contains("[data-domus=\"x1y2\"] .icon"));
+        assert!(scoped.contains("[data-domius=\"x1y2\"] .btn"));
+        assert!(scoped.contains("[data-domius=\"x1y2\"] .icon"));
     }
 
     #[test]
     fn test_scope_element_selectors() {
         let css = "h1 { font-size: 2rem; } p { margin: 0; }";
         let scoped = scope_css(css, "1a2b");
-        assert!(scoped.contains("[data-domus=\"1a2b\"] h1"));
-        assert!(scoped.contains("[data-domus=\"1a2b\"] p"));
+        assert!(scoped.contains("[data-domius=\"1a2b\"] h1"));
+        assert!(scoped.contains("[data-domius=\"1a2b\"] p"));
     }
 
     #[test]
     fn test_scope_class_and_element_combined() {
         let css = ".container h2 { color: blue; }";
         let scoped = scope_css(css, "ff00");
-        assert!(scoped.contains("[data-domus=\"ff00\"] .container h2"));
+        assert!(scoped.contains("[data-domius=\"ff00\"] .container h2"));
     }
 
     #[test]
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_scope_attr_format() {
-        assert_eq!(scope_attr("a1b2"), "[data-domus=\"a1b2\"]");
+        assert_eq!(scope_attr("a1b2"), "[data-domius=\"a1b2\"]");
     }
 
     #[test]
@@ -277,7 +277,7 @@ mod tests {
     fn test_scope_comment_stripped() {
         let css = "/* header */ .title { font-size: 1rem; }";
         let scoped = scope_css(css, "00ff");
-        assert!(scoped.contains("[data-domus=\"00ff\"] .title"));
+        assert!(scoped.contains("[data-domius=\"00ff\"] .title"));
         assert!(!scoped.contains("/* header */"));
     }
 
@@ -290,7 +290,7 @@ mod tests {
         "#;
         let hash = generate_scope_hash("src/Card.rs", css);
         let scoped = scope_css(css, &hash);
-        let attr = format!("[data-domus=\"{}\"]", hash);
+        let attr = format!("[data-domius=\"{}\"]", hash);
         assert!(scoped.contains(&format!("{} .wrapper", attr)));
         assert!(scoped.contains(&format!("{} .header", attr)));
         assert!(scoped.contains(&format!("{} .footer", attr)));

@@ -111,15 +111,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
-name = "domus-cli"
+name = "domius-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
- "domus-core",
+ "domius-core",
 ]
 
 [[package]]
-name = "domus-core"
+name = "domius-core"
 version = "0.1.0"
 dependencies = [
  "js-sys",
@@ -128,7 +128,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "domus-macro"
+name = "domius-macro"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
@@ -137,10 +137,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "domus-web"
+name = "domius-web"
 version = "0.1.0"
 dependencies = [
- "domus-core",
+ "domius-core",
  "wasm-bindgen",
  "web-sys",
 ]

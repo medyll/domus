@@ -1,4 +1,4 @@
-//! DOM binding and component system for Domus.
+//! DOM binding and component system for Domius.
 
 #![warn(missing_docs)]
 
@@ -8,11 +8,11 @@ pub mod disposal;
 pub mod list;
 pub mod page;
 pub mod router;
-pub use component::{DomusComponent, DomusNode, mount_component};
-pub use page::DomusPage;
+pub use component::{DomiusComponent, DomiusNode, mount_component};
+pub use page::DomiusPage;
 pub use router::{Router, RoutePattern};
 
-/// Initialize the Domus runtime. Call once from `wasm_bindgen(start)`.
+/// Initialize the Domius runtime. Call once from `wasm_bindgen(start)`.
 pub fn init() {
     disposal::init_disposal_observer();
 }

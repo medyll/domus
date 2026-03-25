@@ -1,7 +1,7 @@
 //! Automatic scope disposal via MutationObserver.
 //!
 //! Watches the document for removed DOM nodes. When a node with a
-//! `data-domus-scope` attribute is removed, the corresponding scope is
+//! `data-domius-scope` attribute is removed, the corresponding scope is
 //! disposed, unsubscribing all reactive effects and freeing memory.
 //!
 //! # Usage
@@ -11,19 +11,19 @@
 //! ```ignore
 //! #[wasm_bindgen(start)]
 //! pub fn main() {
-//!     domus_web::init(); // calls init_disposal_observer internally
+//!     domius_web::init(); // calls init_disposal_observer internally
 //! }
 //! ```
 //!
 //! # DOM contract
 //!
-//! Components that create a scope must set the `data-domus-scope` attribute on
+//! Components that create a scope must set the `data-domius-scope` attribute on
 //! their root element to the scope's numeric ID. The observer reads this
 //! attribute on removal and calls `dispose_scope`.
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use domus_core::scope::dispose_scope;
+    use domius_core::scope::dispose_scope;
     use wasm_bindgen::prelude::*;
     use wasm_bindgen::JsCast;
     use web_sys::{MutationObserver, MutationObserverInit, MutationRecord, NodeList};
@@ -40,8 +40,8 @@ mod wasm {
                     if let Some(node) = removed.get(i) {
                         if let Some(element) = node.dyn_ref::<web_sys::Element>() {
                             try_dispose_element(element);
-                            // Also check descendants with data-domus-scope
-                            if let Ok(scoped) = element.query_selector_all("[data-domus-scope]") {
+                            // Also check descendants with data-domius-scope
+                            if let Ok(scoped) = element.query_selector_all("[data-domius-scope]") {
                                 for j in 0..scoped.length() {
                                     if let Some(child) = scoped.get(j) {
                                         if let Some(el) = child.dyn_ref::<web_sys::Element>() {
@@ -75,7 +75,7 @@ mod wasm {
     }
 
     fn try_dispose_element(element: &web_sys::Element) {
-        if let Some(scope_str) = element.get_attribute("data-domus-scope") {
+        if let Some(scope_str) = element.get_attribute("data-domius-scope") {
             if let Ok(scope_id) = scope_str.parse::<usize>() {
                 dispose_scope(scope_id);
             }

@@ -1,4 +1,4 @@
-//! hello-world — a Domus WASM application demonstrating core features.
+//! hello-world — a Domius WASM application demonstrating core features.
 //!
 //! Features shown:
 //! - Reactive signals (`signal`, `create_effect`)
@@ -7,8 +7,8 @@
 //! - DOM construction via `web_sys`
 //! - Scoped CSS (via data-domus attribute convention)
 
-use domus_core::signal::signal;
-use domus_core::effect::create_effect;
+use domius_core::signal::signal;
+use domius_core::effect::create_effect;
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element, HtmlButtonElement, HtmlInputElement};
 
@@ -30,7 +30,7 @@ fn text_node(text: &str) -> web_sys::Text {
 
 fn build_counter(app: &Element) {
     let section = el("section");
-    section.set_attribute("data-domus-scope", "counter").unwrap();
+    section.set_attribute("data-domius-scope", "counter").unwrap();
 
     let h2 = el("h2");
     h2.set_text_content(Some("Counter"));
@@ -106,7 +106,7 @@ fn build_counter(app: &Element) {
 
 fn build_todo_list(app: &Element) {
     let section = el("section");
-    section.set_attribute("data-domus-scope", "todo").unwrap();
+    section.set_attribute("data-domius-scope", "todo").unwrap();
 
     let h2 = el("h2");
     h2.set_text_content(Some("Todo List"));
@@ -173,13 +173,13 @@ fn build_todo_list(app: &Element) {
 
 #[wasm_bindgen(start)]
 pub fn main() {
-    domus_web::init();
+    domius_web::init();
 
     let document = document();
     let app = document.get_element_by_id("app").expect("#app not found");
 
     let heading = el("h1");
-    heading.set_text_content(Some("Domus — Hello World"));
+    heading.set_text_content(Some("Domius — Hello World"));
     app.append_child(&heading).unwrap();
 
     build_counter(&app);

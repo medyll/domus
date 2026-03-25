@@ -193,7 +193,7 @@ fn gen_dynamic_text_inline(expr: &Expr, parent_var: &Ident) -> TokenStream {
         #clone_stmts
         {
             let #dyn_clone = #dyn_var.clone();
-            domus_core::effect::create_effect(move || {
+            domius_core::effect::create_effect(move || {
                 let __value = (#cloned_expr).to_string();
                 #dyn_clone.set_text_content(Some(&__value));
             });
@@ -212,7 +212,7 @@ fn gen_dynamic_attr_effect(expr: &Expr, el_var: &Ident, attr_name: &str) -> Toke
         #clone_stmts
         {
             let #el_clone = #el_var.clone();
-            domus_core::effect::create_effect(move || {
+            domius_core::effect::create_effect(move || {
                 let __value = (#cloned_expr).to_string();
                 #el_clone.set_attribute(#attr_name, &__value)
                     .expect(concat!("failed to set dynamic attribute ", #attr_name));

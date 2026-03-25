@@ -1,4 +1,4 @@
-//! Procedural macros for Domus.
+//! Procedural macros for Domius.
 
 mod codegen;
 mod parser;
@@ -11,7 +11,7 @@ use proc_macro2::TokenStream as TokenStream2;
 /// Supports both Rust-style (`div { }`) and HTML-style (`<div></div>`) syntax.
 /// Transforms macro input into a reactive component representation.
 #[proc_macro]
-pub fn domus(input: TokenStream) -> TokenStream {
+pub fn domius(input: TokenStream) -> TokenStream {
     let input2 = TokenStream2::from(input);
     match parser::parse_rsx(input2) {
         Ok(ast) => {

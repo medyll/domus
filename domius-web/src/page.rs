@@ -1,8 +1,8 @@
-//! `DomusPage` trait — extends `DomusComponent` with routing metadata.
+//! `DomiusPage` trait — extends `DomiusComponent` with routing metadata.
 
-use crate::component::DomusComponent;
+use crate::component::DomiusComponent;
 
-/// Extension of `DomusComponent` for top-level page components.
+/// Extension of `DomiusComponent` for top-level page components.
 ///
 /// Pages have a URL route, a browser title, and an async `on_load` hook
 /// for data fetching or side-effects that should run on navigation.
@@ -12,19 +12,19 @@ use crate::component::DomusComponent;
 /// ```ignore
 /// struct HomePage;
 ///
-/// impl DomusComponent for HomePage {
+/// impl DomiusComponent for HomePage {
 ///     type Props = ();
 ///     type State = ();
 ///     fn setup(_: ()) -> () { () }
-///     fn render(_: &()) -> DomusNode { domus! { div { "Home" } } }
+///     fn render(_: &()) -> DomusNode { domius! { div { "Home" } } }
 /// }
 ///
-/// impl DomusPage for HomePage {
+/// impl DomiusPage for HomePage {
 ///     fn route() -> &'static str { "/" }
 ///     fn title(_: &()) -> String { "Home".to_string() }
 /// }
 /// ```
-pub trait DomusPage: DomusComponent {
+pub trait DomiusPage: DomiusComponent {
     /// The URL path this page handles, e.g. `"/"` or `"/user/:id"`.
     fn route() -> &'static str;
 

@@ -1,9 +1,9 @@
-//! `DomusComponent` trait and supporting types for the Domus component model.
+//! `DomiusComponent` trait and supporting types for the Domius component model.
 
 /// The rendered output of a component — a live DOM element.
-pub type DomusNode = web_sys::Element;
+pub type DomiusNode = web_sys::Element;
 
-/// Core trait every Domus component must implement.
+/// Core trait every Domius component must implement.
 ///
 /// # Type Parameters
 ///
@@ -32,7 +32,7 @@ pub type DomusNode = web_sys::Element;
 ///     count: Signal<i32>,
 /// }
 ///
-/// impl DomusComponent for Counter {
+/// impl DomiusComponent for Counter {
 ///     type Props = CounterProps;
 ///     type State = CounterState;
 ///
@@ -40,13 +40,13 @@ pub type DomusNode = web_sys::Element;
 ///         CounterState { count: signal(props.initial) }
 ///     }
 ///
-///     fn render(state: &CounterState) -> DomusNode {
+///     fn render(state: &CounterState) -> DomiusNode {
 ///         let count = state.count.clone();
-///         domus! { div { "Count: " {count} } }
+///         domius! { div { "Count: " {count} } }
 ///     }
 /// }
 /// ```
-pub trait DomusComponent {
+pub trait DomiusComponent {
     /// Immutable configuration passed from parent to this component.
     type Props;
 
@@ -59,7 +59,7 @@ pub trait DomusComponent {
 
     /// Produce the DOM subtree for this component.
     /// Called once after `setup`; DOM is kept live via signal effects.
-    fn render(state: &Self::State) -> DomusNode;
+    fn render(state: &Self::State) -> DomiusNode;
 
     /// Mount this component as a child of `parent`.
     /// Default implementation: calls `setup` + `render` + `append_child`.
@@ -68,7 +68,7 @@ pub trait DomusComponent {
         let node = Self::render(&state);
         parent
             .append_child(&node)
-            .expect("DomusComponent::mount — failed to append node");
+            .expect("DomiusComponent::mount — failed to append node");
         state
     }
 }
@@ -78,7 +78,7 @@ pub trait DomusComponent {
 /// ```ignore
 /// let state = mount_component::<Counter>(CounterProps { initial: 0 }, &body);
 /// ```
-pub fn mount_component<C: DomusComponent>(
+pub fn mount_component<C: DomiusComponent>(
     props: C::Props,
     parent: &web_sys::Element,
 ) -> C::State {
@@ -90,10 +90,10 @@ mod tests {
     use super::*;
 
     // ---------------------------------------------------------------------------
-    // Minimal mock so DomusComponent trait can be tested without a real DOM
+    // Minimal mock so DomiusComponent trait can be tested without a real DOM
     // ---------------------------------------------------------------------------
 
-    /// Stand-in for `DomusNode` in tests (not web-sys dependent in type-check)
+    /// Stand-in for `DomiusNode` in tests (not web-sys dependent in type-check)
     struct MockNode;
 
     struct NoProps;
@@ -102,7 +102,7 @@ mod tests {
     /// Minimal component with unit props/state
     struct NullComponent;
 
-    /// We can't impl DomusComponent with MockNode since DomusNode = web_sys::Element.
+    /// We can't impl DomiusComponent with MockNode since DomiusNode = web_sys::Element.
     /// Instead, test the trait pattern using a standalone struct.
     ///
     /// These tests verify that the trait's associated types and method signatures
@@ -217,8 +217,8 @@ mod tests {
     #[test]
     fn test_domus_component_trait_associated_types_accessible() {
         // Compile-time check: verify Props/State associated types are accessible.
-        fn _assert_props<C: DomusComponent>(_: &C::Props) {}
-        fn _assert_state<C: DomusComponent>(_: &C::State) {}
+        fn _assert_props<C: DomiusComponent>(_: &C::Props) {}
+        fn _assert_state<C: DomiusComponent>(_: &C::State) {}
         // If this function compiles, the associated types are correctly declared.
         // Actual invocation not needed — type-checking is sufficient.
         let _ = std::any::type_name::<StatefulComponent>();

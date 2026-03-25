@@ -6,7 +6,7 @@
 //! # Example
 //!
 //! ```
-//! use domus_web::context::{provide_context, use_context};
+//! use domius_web::context::{provide_context, use_context};
 //!
 //! #[derive(Clone)]
 //! struct Theme { dark: bool }

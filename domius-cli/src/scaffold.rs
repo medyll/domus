@@ -1,4 +1,4 @@
-//! Code and project scaffold generation for Domus CLI.
+//! Code and project scaffold generation for Domius CLI.
 //!
 //! All functions return `ScaffoldFile` lists (path + content strings) and
 //! are fully testable without touching the file system.
@@ -22,7 +22,7 @@ impl ScaffoldFile {
 // `domus new project <name>`
 // ---------------------------------------------------------------------------
 
-/// Generate all files for a new Domus project named `name`.
+/// Generate all files for a new Domius project named `name`.
 pub fn new_project(name: &str) -> Vec<ScaffoldFile> {
     let snake = to_snake_case(name);
     vec![
@@ -38,8 +38,8 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-domus-web = {{ path = "../../domus-web" }}
-domus-core = {{ path = "../../domus-core" }}
+domius-web = {{ path = "../../domius-web" }}
+domius-core = {{ path = "../../domius-core" }}
 wasm-bindgen = "0.2"
 web-sys = {{ version = "0.3", features = ["Window", "Document", "Element", "Node"] }}
 "#,
@@ -49,13 +49,13 @@ web-sys = {{ version = "0.3", features = ["Window", "Document", "Element", "Node
         ScaffoldFile::new(
             format!("{}/src/lib.rs", name),
             format!(
-                r#"//! {name} — a Domus WASM application.
+                r#"//! {name} — a Domius WASM application.
 
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
 pub fn main() {{
-    domus_web::init();
+    domius_web::init();
     // Mount your root component here
 }}
 "#,
@@ -67,7 +67,7 @@ pub fn main() {{
             r#"//! Route registration.
 //!
 //! Call `register_routes` from your entry point.
-use domus_web::router::Router;
+use domius_web::router::Router;
 
 pub fn register_routes() -> Router<fn()> {
     let mut router = Router::new();
@@ -131,7 +131,7 @@ pub use view::{pascal};
             format!("src/components/{}/view.rs", snake),
             format!(
                 r#"//! View for `{pascal}`.
-use domus_web::component::{{DomusComponent, DomusNode}};
+use domius_web::component::{{DomiusComponent, DomiusNode}};
 
 pub struct {pascal};
 
@@ -144,7 +144,7 @@ pub struct {pascal}State {{
     // Add reactive state here
 }}
 
-impl DomusComponent for {pascal} {{
+impl DomiusComponent for {pascal} {{
     type Props = {pascal}Props;
     type State = {pascal}State;
 
@@ -153,7 +153,7 @@ impl DomusComponent for {pascal} {{
         {pascal}State {{}}
     }}
 
-    fn render(state: &{pascal}State) -> DomusNode {{
+    fn render(state: &{pascal}State) -> DomiusNode {{
         let _ = state;
         todo!("implement {pascal}::render")
     }}
@@ -198,7 +198,7 @@ pub use view::{pascal}Page;
             format!("src/pages/{}/controller.rs", snake),
             format!(
                 r#"//! Controller (setup logic) for `{pascal}Page`.
-use domus_core::signal::{{Signal, signal}};
+use domius_core::signal::{{Signal, signal}};
 
 pub struct {pascal}State {{
     // Add reactive signals here
@@ -215,13 +215,13 @@ pub fn setup() -> {pascal}State {{
             format!("src/pages/{}/view.rs", snake),
             format!(
                 r#"//! View for `{pascal}Page`.
-use domus_web::component::{{DomusComponent, DomusNode}};
-use domus_web::page::DomusPage;
+use domius_web::component::{{DomiusComponent, DomiusNode}};
+use domius_web::page::DomiusPage;
 use super::controller;
 
 pub struct {pascal}Page;
 
-impl DomusComponent for {pascal}Page {{
+impl DomiusComponent for {pascal}Page {{
     type Props = ();
     type State = controller::{pascal}State;
 
@@ -229,13 +229,13 @@ impl DomusComponent for {pascal}Page {{
         controller::setup()
     }}
 
-    fn render(state: &controller::{pascal}State) -> DomusNode {{
+    fn render(state: &controller::{pascal}State) -> DomiusNode {{
         let _ = state;
         todo!("implement {pascal}Page::render")
     }}
 }}
 
-impl DomusPage for {pascal}Page {{
+impl DomiusPage for {pascal}Page {{
     fn route() -> &'static str {{ "{route}" }}
     fn title(_: &controller::{pascal}State) -> String {{ "{pascal}".to_string() }}
 }}
@@ -375,7 +375,7 @@ mod tests {
     fn test_new_component_view_has_impl_domus_component() {
         let files = new_component("NavBar");
         let view = files.iter().find(|f| f.path.ends_with("view.rs")).unwrap();
-        assert!(view.content.contains("impl DomusComponent for NavBar"));
+        assert!(view.content.contains("impl DomiusComponent for NavBar"));
     }
 
     #[test]
@@ -402,7 +402,7 @@ mod tests {
     fn test_new_page_view_impl_domus_page() {
         let files = new_page("Home");
         let view = files.iter().find(|f| f.path.ends_with("view.rs")).unwrap();
-        assert!(view.content.contains("impl DomusPage for HomePage"));
+        assert!(view.content.contains("impl DomiusPage for HomePage"));
     }
 
     #[test]

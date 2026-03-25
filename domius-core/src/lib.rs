@@ -1,7 +1,7 @@
-//! Core reactive runtime for Domus.
+//! Core reactive runtime for Domius.
 //!
 //! This crate provides the low-level signal/effect runtime used by higher-level
-//! crates such as `domus-web` and `domus-cli`.
+//! crates such as `domius-web` and `domius-cli`.
 
 #![warn(missing_docs)]
 
