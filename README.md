@@ -1,102 +1,250 @@
 # Domus
 
-Reactive UI framework for Rust/WASM. Fine-grained signals, no Virtual DOM, direct DOM manipulation via `web_sys`.
+**Reactive UI framework for Rust — Web & Desktop**
+
+Build interactive web and desktop applications using only Rust. No JavaScript required.
 
 ```
 Planning ✅  Development ✅  Testing ✅  Release 🔄
-154 tests passing · Alpha
+Multi-platform · Alpha v0.1.0
 ```
 
 ---
 
-## Why Domus
+## Table of Contents
 
-Most WASM UI frameworks port a VDOM approach from JavaScript. Domus takes a different path: signals propagate changes directly to the exact DOM nodes that depend on them. No tree diffing, no re-render cycle, no reconciler.
-
-The result is predictable performance — a signal update is O(1) regardless of component tree size — and a small WASM bundle because there is no diffing algorithm to ship.
-
-The framework is written entirely in Rust. The only JavaScript is the `wasm-bindgen` glue generated at compile time.
-
----
-
-## Architecture
-
-```mermaid
-graph TD
-    App["<b>Your Application</b><br/>pages/ · components/ · routes.rs"]
-    Web["<b>domus-web</b><br/>component · router · context · list · page · disposal"]
-    Core["<b>domus-core</b><br/>Signal · Effect · Scope"]
-    WB["<b>wasm-bindgen</b><br/>web-sys · js-sys"]
-    Macro["<b>domus-macro</b><br/>RSX parser · codegen"]
-    CLI["<b>domus-cli</b><br/>scaffold · css-scoper"]
-
-    App -- "DomusComponent / DomusPage traits" --> Web
-    Web -- "domus_core::signal/effect/scope" --> Core
-    Web -- "web_sys DOM" --> WB
-    Core --> Macro
-    Macro --> CLI
-```
-
-### Crates
-
-| Crate | Purpose |
-|-------|---------|
-| `domus-core` | Reactive primitives: `Signal`, `Effect`, `Scope`, `batch` |
-| `domus-macro` | RSX proc-macro: parses declarative UI syntax, emits `web_sys` code |
-| `domus-web` | Component system, router, context API, list reconciliation, disposal |
-| `domus-cli` | CLI scaffolding (`domus new project`, `domus add component/page`), scoped CSS |
+1. [What is Domus?](#what-is-domus) — Introduction for beginners
+2. [Quick Start](#quick-start) — Get running in 5 minutes
+3. [Your First Component](#your-first-component) — Build something real
+4. [Core Concepts](#core-concepts) — Signals, Effects, Batching
+5. [Building Applications](#building-applications) — Components, Pages, Router
+6. [Architecture](#architecture) — How it works under the hood
+7. [Advanced Topics](#advanced-topics) — Context, Lists, Scoped CSS
+8. [CLI Reference](#cli-reference) — Scaffold projects quickly
+9. [Testing](#testing) — Run the test suite
+10. [Roadmap](#roadmap) — What's coming next
 
 ---
 
-## Installation
+## What is Domus?
 
-```toml
-# Cargo.toml
-[lib]
-crate-type = ["cdylib"]
+### The Problem
 
-[dependencies]
-domus-web  = "0.1"
-domus-core = "0.1"
-wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Node"] }
+Most UI frameworks for Rust either target only the web (WASM) or require complex JavaScript tooling. Building cross-platform apps usually means maintaining separate codebases.
+
+### The Domus Solution
+
+Domus uses **signals** — a smarter way to track changes. When data changes, only the exact text or element that depends on it updates. Nothing else moves.
+
+Think of it like a spreadsheet:
+- Cell A1 contains `5`
+- Cell B1 contains `=A1 * 2`
+- When you change A1 to `10`, B1 automatically becomes `20`
+
+Domus brings this reactive model to **both web and desktop** UIs with a single codebase.
+
+### Multi-Platform Architecture
+
+```
+┌─────────────────────────────────────┐
+│       Your Application Code         │
+├─────────────────────────────────────┤
+│  domius-web  │  domius-desktop      │  ← Choose your backend
+├─────────────────────────────────────┤
+│         domius-core                 │  ← 100% Rust, platform-agnostic
+└─────────────────────────────────────┘
 ```
 
-```bash
-cargo install wasm-pack domus-cli
-```
+### Key Benefits
+
+| Benefit | What it means |
+|---------|---------------|
+| **Fast** | O(1) updates — changing one signal doesn't re-render the whole page |
+| **Small** | No Virtual DOM = less code = smaller bundles |
+| **Simple** | Write Rust, not JavaScript. No complex build chains |
+| **Precise** | Only the exact node that changed gets updated |
+| **Cross-platform** | Same code for Web (WASM) and Desktop (Tauri) |
+
+### When to Use Domus
+
+✅ **Good fit:**
+- Dashboards with live data
+- Real-time applications
+- Projects where you want to avoid JavaScript
+- Performance-critical UIs
+- Cross-platform apps (web + desktop)
+
+❌ **Not ideal:**
+- Static content sites (use a simpler tool)
+- Projects requiring heavy JavaScript ecosystem
 
 ---
 
 ## Quick Start
 
+### Prerequisites
+
+Install these tools first:
+
 ```bash
-domus new project my-app
-cd my-app
+# Rust toolchain (if you don't have it)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# WASM pack — builds Rust to WASM (for web projects)
+cargo install wasm-pack
+
+# Domus CLI — project scaffolding
+cargo install domus-cli
+```
+
+### Choose Your Platform
+
+#### Web (WASM)
+
+```bash
+# Scaffold a new web project
+domus new project my-app-web
+cd my-app-web
+
+# Build for web (creates a pkg/ folder)
 wasm-pack build --target web
+
+# Serve locally (requires Node.js)
 npx serve .
 ```
 
-Generated project structure:
+Open `http://localhost:3000` in your browser.
+
+#### Desktop (Tauri)
+
+```bash
+# Scaffold a new desktop project  
+domus new project my-app-desktop --tauri
+cd my-app-desktop
+
+# Install Tauri CLI
+cargo install tauri-cli
+
+# Run in development mode
+cargo tauri dev
+```
+
+### Project Structure
 
 ```
 my-app/
-├── Cargo.toml
-├── index.html
+├── Cargo.toml          # Rust dependencies
+├── index.html          # Entry point (web) / src-tauri/tauri.conf.json (desktop)
 └── src/
-    ├── lib.rs        # wasm_bindgen entry point
-    └── routes.rs     # route registration
+    ├── lib.rs          # Your main Rust code
+    └── routes.rs       # URL routing (web) or window management (desktop)
 ```
 
-Add components and pages as the project grows:
+### Choosing a Backend in Your Code
 
-```bash
-domus add component NavBar
-# → src/components/nav_bar/{mod,view,style}.rs
+In your `Cargo.toml`:
 
-domus add page Dashboard
-# → src/pages/dashboard/{mod,controller,view,style}.rs
+```toml
+# For Web
+[dependencies]
+domius-core = "0.1"
+domius-web = "0.1"
+
+# For Desktop
+[dependencies]
+domius-core = "0.1"
+domius-desktop = "0.1"
 ```
+
+Your component code remains the same — only the backend changes!
+
+---
+
+## Your First Component
+
+Let's build a counter — the "Hello World" of reactive UIs.
+
+### Step 1: Define the Component
+
+Create `src/components/counter/mod.rs`:
+
+```rust
+use domus_web::component::{DomusComponent, DomusNode};
+use domus_core::signal::signal;
+
+// The component struct (empty — state goes in CounterState)
+pub struct Counter;
+
+// Props: data passed from parent
+#[derive(Clone)]
+pub struct CounterProps {
+    pub initial: i32,
+}
+
+// State: internal reactive data
+pub struct CounterState {
+    pub count: Signal<i32>,
+    pub set_count: WriteSignal<i32>,
+}
+```
+
+### Step 2: Setup the State
+
+```rust
+impl DomusComponent for Counter {
+    type Props = CounterProps;
+    type State = CounterState;
+
+    fn setup(props: CounterProps) -> CounterState {
+        // Create a signal — a reactive value
+        let (count, set_count) = signal(props.initial);
+        CounterState { count, set_count }
+    }
+```
+
+### Step 3: Render the UI
+
+```rust
+    fn render(state: &CounterState) -> DomusNode {
+        domus! {
+            <div class="counter">
+                <h2>"Counter"</h2>
+                <p>"Count: " {state.count.get()}</p>
+                <button on_click={move |_| {
+                    let current = state.count.get();
+                    state.set_count.set(current + 1);
+                }}>
+                    "Increment"
+                </button>
+            </div>
+        }
+    }
+}
+```
+
+### Step 4: Mount It
+
+In `src/lib.rs`:
+
+```rust
+use domus_web::component::mount_component;
+use crate::components::counter::{Counter, CounterProps};
+
+#[wasm_bindgen(start)]
+pub fn main() {
+    domus_web::init();
+    
+    let app = document().get_element_by_id("app").unwrap();
+    mount_component::<Counter>(&app, CounterProps { initial: 0 });
+}
+```
+
+### What Happens
+
+1. User clicks "Increment"
+2. `set_count.set()` updates the signal
+3. Domus automatically re-runs any code that read `count.get()`
+4. Only the `<p>` text node updates — nothing else re-renders
 
 ---
 
@@ -104,35 +252,42 @@ domus add page Dashboard
 
 ### Signals
 
-A `Signal<T>` is a reactive cell. Reading it inside an effect registers a dependency; writing it notifies all dependent effects.
+A `Signal<T>` is a reactive container. It holds a value and notifies listeners when it changes.
 
 ```rust
 use domus_core::signal::signal;
 
+// Create a signal
 let (count, set_count) = signal(0i32);
 
-let current = count.get();   // read — tracks if inside an effect
-set_count.set(current + 1);  // write — triggers subscribers
+// Read the value (tracks dependencies if inside an effect)
+let current = count.get();
+
+// Write a new value (notifies all subscribers)
+set_count.set(current + 1);
 ```
+
+**Key insight:** Reading a signal inside an effect automatically registers that effect as a subscriber.
 
 ### Effects
 
-An `Effect` re-runs its closure whenever any signal read during the previous run changes.
+An `Effect` runs code whenever its dependent signals change.
 
 ```rust
 use domus_core::effect::create_effect;
 
 create_effect(move || {
-    // runs once immediately, then again on every change
-    web_sys::console::log_1(&count.get().into());
+    // This runs once immediately...
+    web_sys::console::log_1(&format!("Count: {}", count.get()).into());
+    // ...and again every time `count` changes
 });
 ```
 
-Dependency tracking is automatic and precise. Only the signals actually read in the last run are tracked.
+Effects are the engine of reactivity. They're used internally by Domus to update the DOM.
 
 ### Batching
 
-Multiple signal writes in one batch trigger each downstream effect at most once.
+When you update multiple signals, you can batch them to avoid redundant updates.
 
 ```rust
 use domus_core::batch::batch;
@@ -141,13 +296,15 @@ batch(|| {
     set_x.set(1);
     set_y.set(2);
     set_z.set(3);
-    // effects fire once, after the closure returns
+    // All effects fire ONCE after the closure returns
 });
 ```
 
+Without batching, each `.set()` would trigger its own round of updates.
+
 ### Scopes
 
-A `Scope` groups effects so they can be disposed together. This is how Domus prevents memory leaks when components unmount.
+A `Scope` groups effects together so they can be cleaned up at once. This prevents memory leaks when components are removed.
 
 ```rust
 use domus_core::scope::{create_scope, dispose_scope, create_effect_in_scope};
@@ -155,235 +312,267 @@ use domus_core::scope::{create_scope, dispose_scope, create_effect_in_scope};
 let scope = create_scope(None);
 
 create_effect_in_scope(scope, move || {
-    // reactive work tied to this scope
+    // This effect is tied to the scope
 });
 
-// When the component unmounts:
+// Later, when the component unmounts:
 dispose_scope(scope);
-// All effects in the scope are unsubscribed from their signals.
+// All effects in this scope are automatically unsubscribed
 ```
 
-Scopes can be nested. Disposing a parent disposes all children.
+**Rule of thumb:** One scope per component. Dispose it when the component unmounts.
 
 ---
 
-## Reactive System Architecture
+## Building Applications
 
-### Dependency Graph: Signals → Effects → Computed
+### Components
 
-```mermaid
-graph LR
-    S1["Signal A"] -->|get| E1["Effect"]
-    S2["Signal B"] -->|get| E1
-    E1 -->|notifies| C["Computed C"]
-    C -->|get| E2["Effect D"]
-    C -->|propagates<br/>changes| S3["Signal C"]
-    S3 -->|get| E2
-
-    style S1 fill:#e1f5ff
-    style S2 fill:#e1f5ff
-    style S3 fill:#e1f5ff
-    style E1 fill:#fff3e0
-    style E2 fill:#fff3e0
-    style C fill:#f3e5f5
-```
-
-**How it works:**
-1. Effects read signals → dependencies are tracked automatically
-2. Signal changes notify all dependent effects
-3. Computed values are signals that auto-update when their sources change
-4. No manual tracking; no Virtual DOM diffing
-
-### Batch Execution: Two-Queue Generation System
-
-```mermaid
-graph TD
-    SIG["Signal.set()"] --> BATCH{In Batch?}
-    BATCH -->|Yes| PQ["PRIMARY_QUEUE"]
-    BATCH -->|No| IS{IS_FLUSHING?}
-    IS -->|Yes| SQ["SECONDARY_QUEUE"]
-    IS -->|No| EXEC["Execute<br/>immediately"]
-
-    PQ --> FLUSH["🔄 Flush Generation"]
-    SQ --> FLUSH
-
-    FLUSH --> DEDUP["Deduplicate<br/>effects"]
-    DEDUP --> EXEC2["Execute all<br/>once per gen"]
-    EXEC2 --> NEXT{New effects<br/>scheduled?}
-    NEXT -->|Yes| PQ
-    NEXT -->|No| END["✅ Done"]
-
-    style BATCH fill:#fff9c4
-    style IS fill:#fff9c4
-    style FLUSH fill:#c8e6c9
-    style END fill:#c8e6c9
-```
-
-**Benefits:**
-- ✅ Nested batches work correctly (only flush at outermost exit)
-- ✅ Diamond dependencies execute effects once, not twice
-- ✅ Glitch-free: derived values see consistent state
-- ✅ Re-entrancy safe: epoch system prevents infinite loops
-
-### Re-entrancy Prevention: Epoch Blocking
-
-```mermaid
-stateDiagram-v2
-    [*] --> Gen1: Generation 1
-    Gen1: ⏳ Executing effects<br/>Mark EXECUTED_THIS_GEN
-
-    Gen1 --> Try: Effect tries<br/>to reschedule?
-
-    Try --> Block: Same epoch<br/>→ BLOCKED
-    Try --> Defer: Next epoch<br/>→ SECONDARY_QUEUE
-
-    Block --> Done: Effect continues
-    Done --> Gen2: Generation 2<br/>Process SECONDARY
-
-    Defer --> Gen2
-
-    Gen2 --> [*]
-
-    style Gen1 fill:#bbdefb
-    style Gen2 fill:#bbdefb
-    style Block fill:#ffccbc
-    style Defer fill:#c8e6c9
-```
-
-**Result:** Effects can safely write signals during execution without causing infinite loops.
-
-### Borrow Safety: Cell Pattern
-
-```mermaid
-graph LR
-    subgraph Old["❌ RefCell (borrow conflicts)"]
-        RC["Rc<RefCell<FnMut>>"]
-        RC -->|borrow_mut| C1["Closure body"]
-        C1 -->|signal.set| SIG1["Borrow conflict!"]
-    end
-
-    subgraph New["✅ Cell (zero-cost)"]
-        CE["Cell<Option<FnMut>>"]
-        CE -->|take| C2["Execute closure"]
-        C2 -->|No active borrow| SIG2["Safe!"]
-        C2 -->|put back| CE
-    end
-
-    style Old fill:#ffcdd2
-    style New fill:#c8e6c9
-```
-
----
-
-## Components
-
-The `DomusComponent` trait separates setup (state construction) from render (DOM building).
+Components are reusable UI building blocks. They follow a simple pattern:
 
 ```rust
-use domus_web::component::{DomusComponent, DomusNode};
-use domus_core::signal::signal;
-
-pub struct Counter;
+pub struct MyComponent;
 
 #[derive(Clone)]
-pub struct CounterProps {
-    pub initial: i32,
+pub struct MyComponentProps {
+    pub title: String,
 }
 
-pub struct CounterState {
-    pub count: Signal<i32>,
-    pub set_count: WriteSignal<i32>,
+pub struct MyComponentState {
+    // Your reactive state here
 }
 
-impl DomusComponent for Counter {
-    type Props = CounterProps;
-    type State = CounterState;
+impl DomusComponent for MyComponent {
+    type Props = MyComponentProps;
+    type State = MyComponentState;
 
-    fn setup(props: CounterProps) -> CounterState {
-        let (count, set_count) = signal(props.initial);
-        CounterState { count, set_count }
+    fn setup(props: MyComponentProps) -> MyComponentState {
+        // Initialize state
     }
 
-    fn render(state: &CounterState) -> DomusNode {
-        let el = document().create_element("div").unwrap();
-        // build DOM, attach effects, return root element
-        el
+    fn render(state: &MyComponentState) -> DomusNode {
+        // Return UI
     }
 }
 ```
 
-`mount_component` wires setup → render → DOM insertion:
+### Pages
 
-```rust
-use domus_web::component::mount_component;
-
-let app = document().get_element_by_id("app").unwrap();
-mount_component::<Counter>(&app, CounterProps { initial: 0 });
-```
-
----
-
-## Pages
-
-`DomusPage` extends `DomusComponent` with a route and a title.
+Pages are special components that represent full screens with URLs.
 
 ```rust
 use domus_web::page::DomusPage;
 
 impl DomusPage for DashboardPage {
     fn route() -> &'static str { "/dashboard" }
-    fn title(_state: &DashboardState) -> String { "Dashboard".into() }
+    
+    fn title(_state: &DashboardState) -> String {
+        "Dashboard".into()
+    }
 }
 ```
 
----
+### Router
 
-## Router
-
-Pattern matching over URL paths. Supports exact segments, named parameters (`:id`), and wildcards (`*`).
+Navigate between pages with pattern matching.
 
 ```rust
 use domus_web::router::Router;
 use std::collections::HashMap;
 
-let mut router: Router<fn(&HashMap<String, String>)> = Router::new();
-router.register("/",            home_handler);
-router.register("/users/:id",   user_handler);
-router.register("/files/*",     files_handler);
+let mut router = Router::new();
 
+// Exact match
+router.register("/", home_handler);
+
+// With parameters
+router.register("/users/:id", user_handler);
+
+// Wildcard
+router.register("/files/*", files_handler);
+
+// Match a URL
 if let Some((handler, params)) = router.match_route("/users/42") {
     // params["id"] == "42"
     handler(&params);
 }
 ```
 
-`RoutePattern` compiles each pattern into a `Vec<Segment>` at registration time; matching is a linear scan with no allocations beyond the params map.
+### Adding Components and Pages
+
+Use the CLI to scaffold:
+
+```bash
+# Add a component
+domus add component NavBar
+# Creates: src/components/nav_bar/{mod.rs, view.rs, style.css}
+
+# Add a page
+domus add page Dashboard
+# Creates: src/pages/dashboard/{mod.rs, controller.rs, view.rs, style.css}
+```
 
 ---
 
-## Context API
+## Architecture
 
-Pass values down the tree without threading them through props.
+### Multi-Platform Design
+
+Domus uses a layered architecture that separates reactive core from platform-specific backends:
+
+```mermaid
+flowchart TB
+    subgraph App["Your Application"]
+        A[Your Components & Pages]
+    end
+    
+    subgraph Backends["Platform Backends"]
+        B1[domius-web<br/>WASM/Web]
+        B2[domius-desktop<br/>Tauri]
+    end
+    
+    subgraph Core["domius-core<br/>100% Rust std"]
+        C[Signal · Effect · Scope · Batch]
+    end
+    
+    subgraph Macro["domius-macro<br/>RSX Parser"]
+        M[domus! macro]
+    end
+    
+    A --> B1
+    A --> B2
+    B1 --> C
+    B2 --> C
+    B1 --> M
+    B2 --> M
+    
+    style App fill:#e3f2fd
+    style Backends fill:#fff3e0
+    style Core fill:#c8e6c9
+    style Macro fill:#f3e5f5
+```
+
+### Crates Overview
+
+| Crate | Purpose | Platform |
+|-------|---------|----------|
+| `domius-core` | Reactive primitives: `Signal`, `Effect`, `Scope`, `batch` | All |
+| `domius-web` | Component system, router, DOM manipulation | Web (WASM) |
+| `domius-desktop` | Component system, Tauri integration | Desktop (Tauri) |
+| `domius-macro` | RSX proc-macro: parses declarative UI syntax | All |
+| `domius-cli` | CLI scaffolding (`domus new`, `domus add`) | All |
+
+### Backend Comparison
+
+| Feature | domius-web | domius-desktop |
+|---------|------------|----------------|
+| **Target** | WASM in browser | Native window (Tauri) |
+| **DOM** | `web_sys` APIs | Tauri webview |
+| **Events** | Browser events | Tauri commands |
+| **Disposal** | `MutationObserver` | Window close events |
+| **Bundle** | `.wasm` + JS | Native binary |
+
+### The Reactive Core
+
+The core is identical for both platforms:
+
+```mermaid
+flowchart LR
+    subgraph User["Your Code"]
+        U[Components]
+    end
+    
+    subgraph Backend["Backend"]
+        B[web/desktop]
+    end
+    
+    subgraph Core["domius-core"]
+        S[Signal]
+        E[Effect]
+        SC[Scope]
+    end
+    
+    U --> B
+    B --> Core
+```
+
+### How Dependency Tracking Works
 
 ```rust
-use domus_web::context::{provide_context, use_context, has_context, remove_context};
+// 1. Effect starts running
+create_effect(move || {
+    // 2. Signal.get() checks: "Is there a running effect?"
+    //    Yes! Registers this effect as a subscriber
+    let value = my_signal.get();
+    
+    // 3. Effect finishes. Dependencies are now tracked
+});
 
-// Near the root:
-provide_context(AppConfig { theme: "dark".into(), lang: "en".into() });
+// 4. Later, signal.set() notifies all subscribers
+my_signal.set(42);
+// Effect re-runs automatically
+```
 
-// Anywhere below:
+This happens via thread-local storage (TLS) — no manual subscription needed.
+
+### Update Flow
+
+When a signal changes, effects are scheduled and executed efficiently:
+
+```mermaid
+flowchart TD
+    Start[Signal.set] --> Batch{In batch?}
+    Batch -->|Yes| PQ[Primary Queue]
+    Batch -->|No| Flush{Is flushing?}
+    Flush -->|Yes| SQ[Secondary Queue]
+    Flush -->|No| Exec1[Execute immediately]
+    
+    PQ --> FlushQ[Flush Generation]
+    SQ --> FlushQ
+    
+    FlushQ --> Dedup[Deduplicate effects]
+    Dedup --> Exec2[Execute each once]
+    Exec2 --> New{New effects?}
+    New -->|Yes| PQ
+    New -->|No| Done[✅ Done]
+    
+    style Start fill:#bbdefb
+    style Done fill:#c8e6c9
+    style FlushQ fill:#fff9c4
+```
+
+**Benefits:**
+- ✅ Nested batches work correctly
+- ✅ Diamond dependencies execute once (not twice)
+- ✅ Glitch-free: derived values see consistent state
+- ✅ Re-entrancy safe: epoch system prevents infinite loops
+
+---
+
+## Advanced Topics
+
+### Context API
+
+Share data across the component tree without passing props everywhere.
+
+```rust
+use domus_web::context::{provide_context, use_context};
+
+// Near the root of your app
+provide_context(AppConfig {
+    theme: "dark".into(),
+    lang: "en".into(),
+});
+
+// Deep in a child component
 if let Some(config) = use_context::<AppConfig>() {
-    // config.theme == "dark"
+    println!("Theme: {}", config.theme);
 }
 ```
 
-The registry is keyed by `TypeId`. Each type can have at most one active context value.
+### Keyed Lists
 
----
-
-## List Reconciliation
-
-`diff_keys` computes the minimal patch to transform an old keyed list into a new one, in O(N+M).
+Efficiently update lists by tracking items with unique keys.
 
 ```rust
 use domus_web::list::{diff_keys, DiffOp};
@@ -392,102 +581,165 @@ let old = vec!["a", "b", "c"];
 let new = vec!["b", "d", "a"];
 
 let patch = diff_keys(&old, &new);
-// patch.removes — indices to remove from old list
-// patch.ops     — Keep(old_index) | Insert for each position in new list
+// patch tells you:
+// - Which items to remove
+// - Which to keep (and where)
+// - Which to insert
 ```
 
-Apply the patch to DOM nodes to perform surgical updates without re-rendering the whole list.
+This is O(N+M) — linear time, not quadratic.
 
----
+### Scoped CSS
 
-## Scoped CSS
-
-Every component gets a deterministic `[data-domus="<hash>"]` attribute selector derived from its file path and CSS content. Styles cannot bleed between components.
-
-```rust
-use domus_cli::css_scoper::{generate_scope_hash, scope_css, scope_attr};
-
-let css = r#"
-    .btn  { color: red; }
-    .icon { width: 16px; }
-    .a, .b { display: flex; }
-    @media (max-width: 768px) { .btn { display: none; } }
-"#;
-
-let hash   = generate_scope_hash("src/components/button/view.rs", css);
-let scoped = scope_css(css, &hash);
-```
-
-Output:
+Every component gets its own CSS namespace automatically.
 
 ```css
-[data-domus="a3f2b1c0"] .btn  { color: red; }
+/* Input: src/components/button/style.css */
+.btn { color: red; }
+.icon { width: 16px; }
+```
+
+Gets compiled to:
+
+```css
+/* Output */
+[data-domus="a3f2b1c0"] .btn { color: red; }
 [data-domus="a3f2b1c0"] .icon { width: 16px; }
-[data-domus="a3f2b1c0"] .a, [data-domus="a3f2b1c0"] .b { display: flex; }
-@media (max-width: 768px) { .btn { display: none; } }
 ```
 
-At-rules (`@media`, `@keyframes`) are passed through unchanged. Comments are stripped. Comma-separated selectors are each prefixed individually.
+Styles cannot leak between components.
 
----
+### RSX Macro
 
-## Automatic Disposal
+The `domus!` macro accepts two syntaxes.
 
-`domus_web::init()` (called once from `wasm_bindgen(start)`) installs a `MutationObserver` on the document. When a node carrying a `data-domus-scope` attribute is removed from the DOM, the corresponding scope is automatically disposed and all its effects unsubscribed.
-
-```rust
-#[wasm_bindgen(start)]
-pub fn main() {
-    domus_web::init(); // installs MutationObserver
-    // mount root component
-}
-```
-
-Set the attribute on component root elements:
-
-```rust
-root_el.set_attribute("data-domus-scope", &scope_id.to_string()).unwrap();
-```
-
----
-
-## RSX Macro
-
-`domus!` accepts both a Rust-style and an HTML-style syntax and emits `web_sys` DOM construction code.
-
-Rust style:
-
+**Rust style:**
 ```rust
 domus! {
     div(class: "card") {
         h2 { "Hello" }
-        p  { "Count: " {count} }
-        button(on_click: move |_| set_count.set(count.get() + 1)) {
-            "Increment"
-        }
+        p { "Count: " {count} }
     }
 }
 ```
 
-HTML style:
-
+**HTML style:**
 ```rust
 domus! {
     <div class="card">
         <h2>Hello</h2>
         <p>Count: {count}</p>
-        <button on_click={move |_| set_count.set(count.get() + 1)}>Increment</button>
     </div>
 }
 ```
 
-Dynamic expressions (`{count}`) compile to a `create_effect` that updates a text node. Event attributes compile to `wasm_bindgen::Closure` + `set_onclick` (or `set_oninput`, `set_onchange`, etc.) + `forget()`.
+Both compile to the same `web_sys` DOM code.
+
+### Automatic Disposal
+
+When a component's DOM node is removed, its effects are automatically cleaned up.
+
+```rust
+// In your component's render:
+let root = domus! { <div data-domus-scope={scope_id}>...</div> };
+
+// When this div is removed from the DOM:
+// → MutationObserver detects removal
+// → Scope is disposed
+// → All effects unsubscribe
+```
+
+Call `domus_web::init()` once at startup to enable this.
 
 ---
 
-## hello-world example
+## CLI Reference
 
-A counter and a todo list, demonstrating all core features in under 200 lines.
+### Commands
+
+```bash
+# Create a new project
+domus new project my-app
+
+# Add a component
+domus add component NavBar
+
+# Add a page
+domus add page Dashboard
+```
+
+### Naming Conventions
+
+The CLI auto-converts names:
+
+| You type | File/folder | Rust struct |
+|----------|-------------|-------------|
+| `NavBar` | `nav_bar/` | `NavBar` |
+| `my-page` | `my_page/` | `MyPage` |
+| `dashboard` | `dashboard/` | `Dashboard` |
+
+---
+
+## Testing
+
+Run all tests:
+
+```bash
+cargo test --workspace --exclude hello-world
+```
+
+Test breakdown:
+
+```
+domus-cli   35 tests   CSS scoper · scaffolding · naming
+domus-core  19 tests   signals · effects · batching · diamonds
+domus-macro 38 tests   RSX parsing · codegen
+domus-web   62 tests   components · router · context · lists
+────────────────────────────────────────────────
+            154 tests  all passing
+```
+
+Tests run natively (no WASM runtime needed). WASM-specific code is stubbed out for testing.
+
+---
+
+## Roadmap
+
+### Current: Alpha (v0.1.0)
+
+**Done:**
+- ✅ Signal/Effect reactive core (platform-agnostic)
+- ✅ Batch system with nested batches
+- ✅ Scope-based disposal
+- ✅ Diamond convergence (single execution)
+- ✅ Re-entrancy prevention
+- ✅ Glitch-free updates
+- ✅ RSX macro (Rust + HTML syntax)
+- ✅ Component system
+- ✅ Page system with routing
+- ✅ Context API
+- ✅ Keyed list reconciliation
+- ✅ Automatic CSS scoping
+- ✅ CLI scaffolding
+- ✅ Web backend (`domius-web`) with MutationObserver disposal
+- ✅ Desktop backend (`domius-desktop`) with Tauri integration
+
+**Coming soon:**
+- [ ] `cargo clippy` clean pass
+- [ ] Public API documentation (`cargo doc`)
+- [ ] Publish to crates.io
+- [ ] Dev server with file watching
+- [ ] Error boundaries
+- [ ] Server-side rendering (SSR) / hydration
+- [ ] Mobile support (iOS/Android via Tauri Mobile)
+
+---
+
+## Examples
+
+### Web (WASM)
+
+See `examples/hello-world` for a complete counter + todo list demo (~200 lines).
 
 ```bash
 cd examples/hello-world
@@ -495,84 +747,179 @@ wasm-pack build --target web
 npx serve .
 ```
 
-Features shown: signal creation, `create_effect` for live DOM updates, `Closure` event handlers, scope markers, list add/remove.
+### Desktop (Tauri)
 
----
-
-## CLI Reference
-
-```
-domus new project <name>      Scaffold a new project
-domus add component <name>    Add a component (mod + view + CSS)
-domus add page <name>         Add a page (mod + controller + view + CSS)
-```
-
-Generated names follow conventions automatically:
-
-| Input | snake_case | PascalCase |
-|-------|-----------|------------|
-| `NavBar` | `nav_bar` | `NavBar` |
-| `my-page` | `my_page` | `MyPage` |
-| `dashboard` | `dashboard` | `Dashboard` |
-
----
-
-## Tests
+See `examples/hello-world-tauri` for a desktop counter application.
 
 ```bash
-cargo test --workspace --exclude hello-world
+cd examples/hello-world-tauri
+
+# Install Tauri CLI if needed
+cargo install tauri-cli
+
+# Run in development mode
+cargo tauri dev
+
+# Build for production
+cargo tauri build
 ```
 
-```
-domus-cli   35 tests   css scoper · scaffold · naming helpers
-domus-core  19 tests   signal · effect · scope · batch · computed
-                      → dynamic deps · diamonds · glitch-free · re-entrancy
-domus-macro 38 tests   RSX parser · codegen · event handlers
-domus-web   62 tests   component · router · context · list · page
-─────────────────────────────────────────────────
-            154 tests  0 failed
-```
-
-All tests run on native (no WASM runtime needed). WASM-only code (`MutationObserver`, DOM APIs) is gated behind `#[cfg(target_arch = "wasm32")]` with no-op stubs for testing.
+**Note:** Building Tauri apps requires additional system dependencies. See the [Tauri documentation](https://v2.tauri.app/start/prerequisites/) for details.
 
 ---
 
-## Project Structure (generated app)
+## Appendix: Technical Diagrams
 
+### Batch System: Two-Queue Generation Flow
+
+Detailed view of how effects are scheduled and deduplicated:
+
+```mermaid
+flowchart TD
+    subgraph SignalWrite["Signal Write"]
+        S[signal.set]
+    end
+    
+    subgraph Queues["Queue System"]
+        direction TB
+        PQ[Primary Queue<br/>Ready effects]
+        SQ[Secondary Queue<br/>Next generation]
+    end
+    
+    subgraph Flush["Flush Process"]
+        direction TB
+        Gen[Start Generation]
+        Drain[Drain Primary Queue]
+        Exec[Execute Effects]
+        Move[Move Secondary → Primary]
+    end
+    
+    subgraph Exit["Exit"]
+        Done[✅ All effects executed]
+    end
+    
+    S --> PQ
+    PQ --> Gen
+    Gen --> Drain
+    Drain --> Exec
+    Exec --> SQ
+    SQ --> Move
+    Move --> Drain
+    Drain -->|Queue empty| Done
+    
+    style SignalWrite fill:#e3f2fd
+    style Queues fill:#fff3e0
+    style Flush fill:#c8e6c9
+    style Exit fill:#f3e5f5
 ```
-my-app/
-├── Cargo.toml
-├── index.html
-└── src/
-    ├── lib.rs
-    ├── routes.rs
-    ├── components/
-    │   └── nav_bar/
-    │       ├── mod.rs
-    │       ├── view.rs
-    │       └── style.css
-    └── pages/
-        └── dashboard/
-            ├── mod.rs
-            ├── controller.rs   ← reactive state setup
-            ├── view.rs         ← DomusComponent + DomusPage impls
-            └── style.css
+
+### Re-entrancy Prevention: Epoch Blocking
+
+How Domus prevents infinite loops when effects write signals:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Gen1: Generation 1 starts
+    
+    state Gen1 {
+        Exec[⏳ Executing effects]
+        Mark[Mark EXECUTED_THIS_GEN]
+        Exec --> Mark
+    end
+    
+    Gen1 --> Try{Effect tries to<br/>reschedule?}
+    
+    Try --> Same: Same epoch
+    Try --> Next: Next epoch
+    
+    Same --> Block[❌ BLOCKED<br/>Already executed]
+    Next --> Defer[⏱️ Deferred to<br/>Secondary Queue]
+    
+    Block --> Gen2
+    Defer --> Gen2
+    
+    Gen2: Generation 2<br/>Process Secondary Queue
+    Gen2 --> [*]
+    
+    style Gen1 fill:#bbdefb
+    style Gen2 fill:#bbdefb
+    style Block fill:#ffccbc
+    style Defer fill:#c8e6c9
 ```
 
----
+**Result:** Effects can safely write signals during execution without causing infinite loops.
 
-## Roadmap
+### Diamond Convergence: Single Execution
 
-- [ ] `cargo clippy` clean pass
-- [ ] `cargo doc --no-deps` public API docs
-- [ ] `v0.1.0-alpha` tag + crates.io publish
-- [ ] Dev server (`domus dev` with file watch + wasm-pack rebuild)
-- [ ] `domus build --release` with wasm-opt pass
-- [ ] Error boundaries
-- [ ] SSR / hydration
+When multiple paths lead to the same effect, it executes only once:
+
+```mermaid
+flowchart TD
+    A[Signal A] --> B[Effect B]
+    A --> C[Effect C]
+    B --> D[Effect D]
+    C --> D
+    
+    A -.->|change| E{Flush}
+    E -->|notify| B
+    E -->|notify| C
+    E -->|notify| D
+    
+    subgraph Execution["Execution Order"]
+        B -->|1st| D
+        C -->|skipped| D
+    end
+    
+    style A fill:#e3f2fd
+    style D fill:#c8e6c9
+    style Execution fill:#fff3e0
+```
+
+**Key insight:** The generation-based flush system tracks which effects have already executed in the current generation, ensuring D runs exactly once.
+
+### Borrow Safety: Cell vs RefCell Pattern
+
+Why Domus uses `Cell<Option<FnMut>>` instead of `RefCell<FnMut>`:
+
+```mermaid
+flowchart LR
+    subgraph Old["❌ RefCell Pattern"]
+        RC[Rc<RefCell<FnMut>>]
+        Borrow[borrow_mut]
+        Conflict[Borrow conflict!<br/>Panic]
+        RC --> Borrow
+        Borrow --> Conflict
+    end
+    
+    subgraph New["✅ Cell Pattern"]
+        CE[Cell<Option<FnMut>>]
+        Take[Take closure]
+        Exec[Execute]
+        Return[Put back]
+        CE --> Take
+        Take --> Exec
+        Exec --> Return
+        Return --> CE
+    end
+    
+    style Old fill:#ffcdd2
+    style New fill:#c8e6c9
+    style Conflict fill:#ef9a9a
+```
+
+**Why it matters:** `RefCell` panics if you try to borrow mutably while already borrowed. `Cell::take()` avoids this by temporarily removing the value.
 
 ---
 
 ## License
 
-MIT
+MIT — use it freely.
+
+---
+
+## Need Help?
+
+- **New to Rust?** Start with [The Rust Book](https://doc.rust-lang.org/book/)
+- **New to WASM?** See [Rust and WebAssembly](https://rustwasm.github.io/docs/book/)
+- **Found a bug?** Open an issue on GitHub
+- **Want to contribute?** Check out the roadmap above

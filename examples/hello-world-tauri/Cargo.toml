@@ -1,0 +1,22 @@
+[package]
+name = "hello-world-tauri"
+version = "0.1.0"
+edition = "2021"
+description = "Hello World example for Domus Desktop (Tauri)"
+publish = false
+
+[workspace]
+
+[dependencies]
+domius-core = { path = "../../domius-core" }
+domius-desktop = { path = "../../domius-desktop" }
+tauri = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+tauri-build = "2.0"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

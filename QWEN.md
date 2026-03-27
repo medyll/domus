@@ -2,12 +2,13 @@
 
 ## Project Overview
 
-**Domus** is a Rust/WASM UI framework featuring **fine-grained reactivity** via signals and **direct DOM manipulation** (no Virtual DOM). It achieves O(1) updates by coupling reactive primitives directly to real DOM nodes with automatic dependency tracking.
+**Domus** is a multi-platform Rust UI framework featuring **fine-grained reactivity** via signals and **direct DOM manipulation** (no Virtual DOM). It achieves O(1) updates by coupling reactive primitives directly to real DOM nodes with automatic dependency tracking.
 
 ### Key Characteristics
 - **Reactive Model**: Signal/Effect architecture with TLS-based automatic dependency tracking
-- **DOM Strategy**: Direct `web_sys` manipulation — no VDOM diffing
-- **Bundle Size**: Minimal — only `wasm-bindgen` glue code
+- **Platform Support**: Web (WASM via `domius-web`) and Desktop (Tauri via `domius-desktop`)
+- **Core Design**: Platform-agnostic `domius-core` — 100% Rust std, no external dependencies
+- **Bundle Size**: Minimal — only platform-specific glue code
 - **Performance**: Predictable O(1) updates regardless of component tree size
 
 ---
@@ -16,22 +17,26 @@
 
 ```
 domus/
-├── domius-core/    # Reactive runtime: Signal, Effect, Scope, batch
-├── domius-macro/   # RSX proc-macro: parses domus!{} syntax → web_sys code
-├── domius-web/     # Component system, router, context, list reconciliation
+├── domius-core/    # Reactive runtime: Signal, Effect, Scope, batch (100% Rust std)
+├── domius-macro/   # RSX proc-macro: parses domus!{} syntax → platform code
+├── domius-web/     # Web backend: component system, router, web_sys DOM
+├── domius-desktop/ # Desktop backend: Tauri integration, native windows
 ├── domius-cli/     # CLI scaffolding: domus new/add commands
 ├── examples/
-│   └── hello-world/  # Counter + todo list demo
+│   ├── hello-world-web/    # Web/WASM counter demo
+│   └── hello-world-tauri/  # Desktop/Tauri counter demo
 └── .cargo/config.toml  # Build configuration (opt-level = 3)
 ```
 
 ### Crate Dependencies
 
 ```
-domius-cli → domius-core
-domius-web → domius-core
-domius-macro → (proc-macro, standalone)
-hello-world → domius-web + domius-core
+domius-cli      → (standalone)
+domius-core     → (no dependencies - 100% Rust std!)
+domius-macro    → (proc-macro, standalone)
+domius-web      → domius-core + wasm-bindgen + web-sys
+domius-desktop  → domius-core + tauri + serde
+hello-world     → domius-web (or) domius-desktop
 ```
 
 ---

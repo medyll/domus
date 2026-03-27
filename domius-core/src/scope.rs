@@ -7,7 +7,15 @@ use crate::effect::Effect;
 
 /// A unique identifier for a Scope.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ScopeId(usize);
+
+impl ScopeId {
+    /// Get the numeric value of this scope ID.
+    pub fn value(self) -> usize {
+        self.0
+    }
+}
 
 pub struct Scope {
     pub id: ScopeId,

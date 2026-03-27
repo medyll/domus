@@ -4,4 +4,5 @@ members = [
   "domius-macro",
   "domius-web",
   "domius-cli",
+  "domius-desktop",
 ]
