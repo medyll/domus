@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Core Module: `domus-core`
+## 1. Core Module: `domius-core`
 
 ### 1.1 Signal<T>
 
@@ -113,7 +113,7 @@ impl BatchedUpdates {
 
 ---
 
-## 2. Macro Module: `domus-macro`
+## 2. Macro Module: `domius-macro`
 
 ### 2.1 RSX Parser
 
@@ -239,7 +239,7 @@ domus! { button(on_click: |_| signal.set(true)) { "Toggle" } }
 
 ---
 
-## 3. Web Module: `domus-web`
+## 3. Web Module: `domius-web`
 
 ### 3.1 DomusComponent Trait
 
@@ -383,7 +383,7 @@ domus! {
 
 ---
 
-## 4. CLI Module: `domus-cli`
+## 4. CLI Module: `domius-cli`
 
 ### 4.1 Commands
 
@@ -647,7 +647,7 @@ fn test_button_component() {
 ---
 
 **Next Steps:**
-1. Implementation of domus-core (Signal, Effect, TLS)
-2. Implementation of domus-macro (RSX parser)
+1. Implementation of domius-core (Signal, Effect, TLS)
+2. Implementation of domius-macro (RSX parser)
 3. Testing framework setup
 4. Example application development

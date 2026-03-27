@@ -33,7 +33,7 @@
 - ✅ Scopes cleanup effects
 
 **Deliverables:**
-- `domus-core` crate with complete reactive system
+- `domius-core` crate with complete reactive system
 - Comprehensive unit tests
 - Zero unsafe code
 
@@ -62,7 +62,7 @@
 - ✅ Compiled WASM works in browser
 
 **Deliverables:**
-- `domus-macro` crate with complete code generation
+- `domius-macro` crate with complete code generation
 - Hello world example compiles to WASM
 - Integration tests with headless browser
 
@@ -88,7 +88,7 @@
 - ✅ Multiple components compose
 
 **Deliverables:**
-- `domus-web` crate with component system
+- `domius-web` crate with component system
 - Button, Input components as examples
 - Component lifecycle working
 
@@ -156,7 +156,7 @@
 
 | ID | Title | Points | Status |
 |----|-------|--------|--------|
-| **S6-01** | Implement domus-cli basic commands | 8 | ⏳ Pending |
+| **S6-01** | Implement domius-cli basic commands | 8 | ⏳ Pending |
 | **S6-02** | Implement MutationObserver disposal | 5 | ⏳ Pending |
 | **S6-03** | Create hello-world example | 5 | ⏳ Pending |
 | **S6-04** | Error boundaries (estimated) | 3 | ⏳ Pending |
@@ -170,7 +170,7 @@
 - ✅ Complete documentation
 
 **Deliverables:**
-- `domus-cli` tool working
+- `domius-cli` tool working
 - Zero memory leaks
 - v0.1.0-alpha release ready
 

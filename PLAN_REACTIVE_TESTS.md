@@ -8,7 +8,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
 ## Phase 1 : Tests qui passent déjà (documentent le bon comportement)
 
 ### 1. Scope + signal cross-lifetime ✅
-- **Fichier** : `domus-core/src/scope.rs` (ajouter tests)
+- **Fichier** : `domius-core/src/scope.rs` (ajouter tests)
 - **Tests** :
   - Signal survit à la disposition du scope qui l'a créé
   - Effect disposé ne reçoit plus de notifications
@@ -17,7 +17,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
 - **Status** : Ces tests **passent déjà**, ils documentent le nettoyage correct
 
 ### 2. Stabilité sous charge ✅
-- **Fichier** : Nouveau `domus-core/src/benchmarks.rs` (tests de charge)
+- **Fichier** : Nouveau `domius-core/src/benchmarks.rs` (tests de charge)
 - **Tests** :
   - 1000 signaux, 1000 effets, mutations aléatoires
   - Compter exact du nombre d'exécutions d'effet
@@ -36,7 +36,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
   3. Dans `runtime::flush_queue()`, appeler `run_with_tracking()` au lieu de `execute()`
   4. **Bonus** : Implémenter un mécanisme de "clear dependencies at entry" pour vraiment tracker dynamiquement
 - **Tests** : `effect_dynamic_dependency_switching` — un effet qui lit A ou B selon une condition
-- **File** : `domus-core/src/tests_dynamic_deps.rs`
+- **File** : `domius-core/src/tests_dynamic_deps.rs`
 
 ### 4. Diamonds (convergence sans duplication) ❌→✅
 - **Problem** : Pas de topological sort, effet D déclenché 2x quand A change et notifie B+C
@@ -47,7 +47,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
 - **Tests** :
   - `effect_diamond_convergence_once` — A→B,C→D, vérifier D exécuté 1x
   - `effect_multiple_sources_one_run` — plusieurs sources, 1 effet qui les lit
-- **File** : `domus-core/src/tests_diamond.rs`
+- **File** : `domius-core/src/tests_diamond.rs`
 
 ### 5. Batch imbriqués ❌→✅
 - **Problem** : Nested `batch()` clear `IN_BATCH` à la sortie du batch interne
@@ -58,7 +58,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
 - **Tests** :
   - `nested_batch_single_flush` — deux batch imbriqués, flush une seule fois
   - `triple_nested_batch` — trois niveaux
-- **File** : `domus-core/src/tests_batch.rs`
+- **File** : `domius-core/src/tests_batch.rs`
 
 ### 6. Ré-entrée (cycle detection) ❌→✅
 - **Problem** : Un effect qui appelle `signal.set()` sur un signal qu'il lit → boucle infinie
@@ -70,7 +70,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
 - **Tests** :
   - `effect_reentrancy_no_infinite_loop` — effet qui écrit un signal qu'il lit
   - `effect_reentrancy_uses_latest_value` — la valeur finale est celle attendue
-- **File** : `domus-core/src/tests_reentrancy.rs`
+- **File** : `domius-core/src/tests_reentrancy.rs`
 
 ### 7. Glitch freedom (cohérence intermédiaire) ❌→✅
 - **Problem** : Sans topo sort, observer D peut voir C dans un état intermédiaire
@@ -80,7 +80,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
 - **Tests** :
   - `glitch_free_convergence` — A=signal, B=derived(A), C=derived(A+B), observer de C ne voit que états valides
   - `derived_signal_propagation` — chaîne de A→B→C, pas d'état intermédiaire glitchy
-- **File** : `domus-core/src/tests_glitch_freedom.rs`
+- **File** : `domius-core/src/tests_glitch_freedom.rs`
 
 ### 8. Effets imbriqués / Computed (dérivés) ❌→✅
 - **Problem** : Pas de primitive `computed()` native
@@ -92,7 +92,7 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
   - `computed_basic_lazy_evaluation` — computed se recalcule seulement si input change
   - `computed_chain_a_b_c` — chaîne A→B(A*2)→C(B+1), vérifier propagation correcte
   - `computed_sharing` — deux effects lisent le même computed, vérifier pas de double recompute
-- **File** : `domus-core/src/computed.rs` (NEW) + `domus-core/src/tests_computed.rs`
+- **File** : `domius-core/src/computed.rs` (NEW) + `domius-core/src/tests_computed.rs`
 
 ---
 
@@ -111,18 +111,18 @@ Implémenter 8 catégories de tests pour couvrir la profondeur du système réac
 
 | Fichier | Action | Description |
 |---------|--------|-------------|
-| `domus-core/src/runtime.rs` | Modify | Ajouter `BATCH_DEPTH`, topo sort dans `flush_queue()`, epoch tracking |
-| `domus-core/src/effect.rs` | Modify | Ajouter `run_with_tracking()`, supporter re-tracking des dépendances |
-| `domus-core/src/computed.rs` | Create | Nouvelle primitive `Computed<T>` |
-| `domus-core/src/lib.rs` | Modify | Re-export `Computed`, `batch` |
-| `domus-core/src/tests_dynamic_deps.rs` | Create | Tests dépendances dynamiques |
-| `domus-core/src/tests_diamond.rs` | Create | Tests convergence sans duplication |
-| `domus-core/src/tests_batch.rs` | Create | Tests batch imbriqués |
-| `domus-core/src/tests_reentrancy.rs` | Create | Tests ré-entrée + cycle |
-| `domus-core/src/tests_glitch_freedom.rs` | Create | Tests cohérence |
-| `domus-core/src/tests_computed.rs` | Create | Tests computed |
-| `domus-core/src/scope.rs` | Modify | Ajouter tests scope + lifetime |
-| `domus-core/src/benchmarks.rs` | Create | Tests de charge |
+| `domius-core/src/runtime.rs` | Modify | Ajouter `BATCH_DEPTH`, topo sort dans `flush_queue()`, epoch tracking |
+| `domius-core/src/effect.rs` | Modify | Ajouter `run_with_tracking()`, supporter re-tracking des dépendances |
+| `domius-core/src/computed.rs` | Create | Nouvelle primitive `Computed<T>` |
+| `domius-core/src/lib.rs` | Modify | Re-export `Computed`, `batch` |
+| `domius-core/src/tests_dynamic_deps.rs` | Create | Tests dépendances dynamiques |
+| `domius-core/src/tests_diamond.rs` | Create | Tests convergence sans duplication |
+| `domius-core/src/tests_batch.rs` | Create | Tests batch imbriqués |
+| `domius-core/src/tests_reentrancy.rs` | Create | Tests ré-entrée + cycle |
+| `domius-core/src/tests_glitch_freedom.rs` | Create | Tests cohérence |
+| `domius-core/src/tests_computed.rs` | Create | Tests computed |
+| `domius-core/src/scope.rs` | Modify | Ajouter tests scope + lifetime |
+| `domius-core/src/benchmarks.rs` | Create | Tests de charge |
 
 ---
 

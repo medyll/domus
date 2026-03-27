@@ -62,7 +62,7 @@
 
 | ID | Title | Points | Status | Epic |
 |----|-------|--------|--------|------|
-| S6-01 | Implement domus-cli basic commands | 8 | ⏳ Pending | MVP 6 |
+| S6-01 | Implement domius-cli basic commands | 8 | ⏳ Pending | MVP 6 |
 | S6-02 | Implement MutationObserver-based disposal | 5 | ⏳ Pending | MVP 6 |
 | S6-03 | Create hello-world example application | 5 | ⏳ Pending | MVP 6 |
 

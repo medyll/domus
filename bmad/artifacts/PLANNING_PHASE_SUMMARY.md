@@ -41,7 +41,7 @@
   - Security considerations
   - Roadmap with 7 phases
 
-**Key Decision:** Three crates (domus-core, domus-macro, domus-web) + CLI tool provides clean separation of concerns.
+**Key Decision:** Three crates (domius-core, domius-macro, domius-web) + CLI tool provides clean separation of concerns.
 
 ---
 
@@ -169,10 +169,10 @@ domus/
 │       ├── PLANNING_PHASE_SUMMARY.md   ✅ This file
 │       ├── stories/                    ⏳ To be populated
 │       └── history/                    ⏳ To be populated
-├── domus-core/                         ⏳ To create
-├── domus-macro/                        ⏳ To create
-├── domus-web/                          ⏳ To create
-├── domus-cli/                          ⏳ To create
+├── domius-core/                         ⏳ To create
+├── domius-macro/                        ⏳ To create
+├── domius-web/                          ⏳ To create
+├── domius-cli/                          ⏳ To create
 └── examples/                           ⏳ To create
 ```
 
@@ -215,18 +215,18 @@ domus/
 
 ### Immediate (Week 1-2)
 - [ ] Set up Cargo workspace with 4 crates
-- [ ] Implement domus-core: `Signal<T>` and `Effect`
+- [ ] Implement domius-core: `Signal<T>` and `Effect`
 - [ ] Implement TLS runtime and dependency tracking
 - [ ] Write comprehensive tests for reactive core
 
 ### Short-term (Week 3-5)
-- [ ] Implement domus-macro: RSX parser
+- [ ] Implement domius-macro: RSX parser
 - [ ] Code generation for static nodes
 - [ ] Code generation for dynamic bindings
 - [ ] Event handler code generation
 
 ### Medium-term (Week 6-9)
-- [ ] Implement domus-web: `DomusComponent` trait
+- [ ] Implement domius-web: `DomusComponent` trait
 - [ ] Router implementation
 - [ ] Component composition
 - [ ] Life cycle hooks

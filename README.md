@@ -45,14 +45,30 @@ Domus brings this reactive model to **both web and desktop** UIs with a single c
 
 ### Multi-Platform Architecture
 
-```
-┌─────────────────────────────────────┐
-│       Your Application Code         │
-├─────────────────────────────────────┤
-│  domius-web  │  domius-desktop      │  ← Choose your backend
-├─────────────────────────────────────┤
-│         domius-core                 │  ← 100% Rust, platform-agnostic
-└─────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph App["Your Application"]
+        Code[Your Components & Pages]
+    end
+    
+    subgraph Backend["Choose Your Backend"]
+        direction LR
+        Web[domius-web<br/>WASM/Web]
+        Desktop[domius-desktop<br/>Tauri]
+    end
+    
+    subgraph Core["domius-core<br/>100% Rust, platform-agnostic"]
+        Reactive[Signal · Effect · Scope]
+    end
+    
+    Code --> Web
+    Code --> Desktop
+    Web --> Reactive
+    Desktop --> Reactive
+    
+    style App fill:#e3f2fd
+    style Backend fill:#fff3e0
+    style Core fill:#c8e6c9
 ```
 
 ### Key Benefits
@@ -94,7 +110,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 cargo install wasm-pack
 
 # Domus CLI — project scaffolding
-cargo install domus-cli
+cargo install domius-cli
 ```
 
 ### Choose Your Platform
@@ -147,16 +163,41 @@ In your `Cargo.toml`:
 ```toml
 # For Web
 [dependencies]
-domius-core = "0.1"
-domius-web = "0.1"
+domius-core = "0.1"      # Reactive core (always required)
+domius-web = "0.1"       # Web backend (WASM)
 
 # For Desktop
 [dependencies]
-domius-core = "0.1"
-domius-desktop = "0.1"
+domius-core = "0.1"      # Reactive core (always required)
+domius-desktop = "0.1"   # Desktop backend (Tauri)
 ```
 
-Your component code remains the same — only the backend changes!
+**Why two crates?**
+- `domius-core` — Platform-agnostic reactive runtime (Signal, Effect, Scope). Use this for platform-independent code.
+- `domius-web` / `domius-desktop` — Platform-specific backends (DOM manipulation, window management).
+
+In your code:
+
+```rust
+// Platform-independent code (shared between web and desktop)
+use domius_core::signal::{signal, Signal};
+use domius_core::effect::create_effect;
+
+// Platform-specific initialization
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    domius_web::init();
+    // ...
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn main() {
+    domius_desktop::init();
+    // ...
+}
+```
+
+Your component logic remains the same — only the initialization changes!
 
 ---
 
@@ -169,8 +210,8 @@ Let's build a counter — the "Hello World" of reactive UIs.
 Create `src/components/counter/mod.rs`:
 
 ```rust
-use domus_web::component::{DomusComponent, DomusNode};
-use domus_core::signal::signal;
+use domius_web::component::{DomusComponent, DomusNode};
+use domius_core::signal::signal;
 
 // The component struct (empty — state goes in CounterState)
 pub struct Counter;
@@ -227,12 +268,12 @@ impl DomusComponent for Counter {
 In `src/lib.rs`:
 
 ```rust
-use domus_web::component::mount_component;
+use domius_web::component::mount_component;
 use crate::components::counter::{Counter, CounterProps};
 
 #[wasm_bindgen(start)]
 pub fn main() {
-    domus_web::init();
+    domius_web::init();
     
     let app = document().get_element_by_id("app").unwrap();
     mount_component::<Counter>(&app, CounterProps { initial: 0 });
@@ -255,7 +296,7 @@ pub fn main() {
 A `Signal<T>` is a reactive container. It holds a value and notifies listeners when it changes.
 
 ```rust
-use domus_core::signal::signal;
+use domius_core::signal::signal;
 
 // Create a signal
 let (count, set_count) = signal(0i32);
@@ -274,7 +315,7 @@ set_count.set(current + 1);
 An `Effect` runs code whenever its dependent signals change.
 
 ```rust
-use domus_core::effect::create_effect;
+use domius_core::effect::create_effect;
 
 create_effect(move || {
     // This runs once immediately...
@@ -290,7 +331,7 @@ Effects are the engine of reactivity. They're used internally by Domus to update
 When you update multiple signals, you can batch them to avoid redundant updates.
 
 ```rust
-use domus_core::batch::batch;
+use domius_core::batch::batch;
 
 batch(|| {
     set_x.set(1);
@@ -307,7 +348,7 @@ Without batching, each `.set()` would trigger its own round of updates.
 A `Scope` groups effects together so they can be cleaned up at once. This prevents memory leaks when components are removed.
 
 ```rust
-use domus_core::scope::{create_scope, dispose_scope, create_effect_in_scope};
+use domius_core::scope::{create_scope, dispose_scope, create_effect_in_scope};
 
 let scope = create_scope(None);
 
@@ -361,7 +402,7 @@ impl DomusComponent for MyComponent {
 Pages are special components that represent full screens with URLs.
 
 ```rust
-use domus_web::page::DomusPage;
+use domius_web::page::DomusPage;
 
 impl DomusPage for DashboardPage {
     fn route() -> &'static str { "/dashboard" }
@@ -377,7 +418,7 @@ impl DomusPage for DashboardPage {
 Navigate between pages with pattern matching.
 
 ```rust
-use domus_web::router::Router;
+use domius_web::router::Router;
 use std::collections::HashMap;
 
 let mut router = Router::new();
@@ -556,7 +597,7 @@ flowchart TD
 Share data across the component tree without passing props everywhere.
 
 ```rust
-use domus_web::context::{provide_context, use_context};
+use domius_web::context::{provide_context, use_context};
 
 // Near the root of your app
 provide_context(AppConfig {
@@ -575,7 +616,7 @@ if let Some(config) = use_context::<AppConfig>() {
 Efficiently update lists by tracking items with unique keys.
 
 ```rust
-use domus_web::list::{diff_keys, DiffOp};
+use domius_web::list::{diff_keys, DiffOp};
 
 let old = vec!["a", "b", "c"];
 let new = vec!["b", "d", "a"];
@@ -649,7 +690,7 @@ let root = domus! { <div data-domus-scope={scope_id}>...</div> };
 // → All effects unsubscribe
 ```
 
-Call `domus_web::init()` once at startup to enable this.
+Call `domius_web::init()` once at startup to enable this.
 
 ---
 
@@ -691,10 +732,10 @@ cargo test --workspace --exclude hello-world
 Test breakdown:
 
 ```
-domus-cli   35 tests   CSS scoper · scaffolding · naming
-domus-core  19 tests   signals · effects · batching · diamonds
-domus-macro 38 tests   RSX parsing · codegen
-domus-web   62 tests   components · router · context · lists
+domius-cli   35 tests   CSS scoper · scaffolding · naming
+domius-core  19 tests   signals · effects · batching · diamonds
+domius-macro 38 tests   RSX parsing · codegen
+domius-web   62 tests   components · router · context · lists
 ────────────────────────────────────────────────
             154 tests  all passing
 ```

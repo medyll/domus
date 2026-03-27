@@ -18,9 +18,9 @@
 
 ## Crate Metadata (before `cargo publish`)
 - [ ] Each `Cargo.toml` has `description`, `license`, `repository`
-- [ ] `domus-core/Cargo.toml` — no path deps (swap to version when published)
-- [ ] `domus-web/Cargo.toml` — no path deps
-- [ ] `domus-cli/Cargo.toml` — no path deps
+- [ ] `domius-core/Cargo.toml` — no path deps (swap to version when published)
+- [ ] `domius-web/Cargo.toml` — no path deps
+- [ ] `domius-cli/Cargo.toml` — no path deps
 
 ## Git
 - [ ] All changes committed
@@ -28,7 +28,7 @@
 - [ ] Push tag
 
 ## Publish order (dependency graph)
-1. `cargo publish -p domus-core`
-2. `cargo publish -p domus-macro`
-3. `cargo publish -p domus-web`
-4. `cargo publish -p domus-cli`
+1. `cargo publish -p domius-core`
+2. `cargo publish -p domius-macro`
+3. `cargo publish -p domius-web`
+4. `cargo publish -p domius-cli`

@@ -82,7 +82,7 @@ Visual Update (browser reflow)
 
 ## 3. Core Components
 
-### 3.1 Reactive Core (`domus-core` crate)
+### 3.1 Reactive Core (`domius-core` crate)
 
 **Responsibility:** Fine-grained reactivity and dependency tracking
 
@@ -113,7 +113,7 @@ thread_local! {
 - Batching scheduler to prevent layout thrashing
 - Scope-based disposal (prevents memory leaks)
 
-### 3.2 Macro Layer (`domus-macro` crate)
+### 3.2 Macro Layer (`domius-macro` crate)
 
 **Responsibility:** Transform declarative syntax into imperative DOM calls
 
@@ -156,7 +156,7 @@ domus! { span { "Count: " {count} } }
 }
 ```
 
-### 3.3 Component System (`domus-web` crate)
+### 3.3 Component System (`domius-web` crate)
 
 **Responsibility:** Component traits, rendering, and lifecycle
 
@@ -182,7 +182,7 @@ pub trait DomusPage: DomusComponent {
 - `Scope` — manages lifecycle and cleanup for a component
 - `Router` — handles page transitions and URL matching
 
-### 3.4 Runtime (`domus-web` crate)
+### 3.4 Runtime (`domius-web` crate)
 
 **Responsibility:** Manage Effects, Scopes, and DOM cleanup
 
@@ -213,7 +213,7 @@ Free WASM memory
 
 ```
 domus/
-├── domus-core/          # Signal, Effect, Runtime, TLS
+├── domius-core/          # Signal, Effect, Runtime, TLS
 │   ├── src/
 │   │   ├── signal.rs
 │   │   ├── effect.rs
@@ -222,7 +222,7 @@ domus/
 │   │   └── lib.rs
 │   └── Cargo.toml
 │
-├── domus-macro/         # Procedural macro for domus!
+├── domius-macro/         # Procedural macro for domus!
 │   ├── src/
 │   │   ├── lib.rs       # proc_macro entry
 │   │   ├── parser.rs    # RSX parser (syn)
@@ -230,7 +230,7 @@ domus/
 │   │   └── transforms.rs
 │   └── Cargo.toml
 │
-├── domus-web/           # Web bindings and components
+├── domius-web/           # Web bindings and components
 │   ├── src/
 │   │   ├── lib.rs
 │   │   ├── component.rs # DomusComponent trait
@@ -242,7 +242,7 @@ domus/
 │   │   └── scope.rs     # Scope management
 │   └── Cargo.toml
 │
-├── domus-cli/           # Code generation tool
+├── domius-cli/           # Code generation tool
 │   ├── src/
 │   │   ├── main.rs
 │   │   ├── commands/
