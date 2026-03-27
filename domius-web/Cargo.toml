@@ -4,9 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 domius-core = { path = "../domius-core" }
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Node"] }
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "Window", "Document", "Element", "Node", "Text",
+    "HtmlElement", "HtmlButtonElement", "HtmlInputElement", "HtmlImageElement",
+    "SvgElement", "MouseEvent", "InputEvent", "FocusEvent", "KeyboardEvent", "Event",
+    "EventTarget", "DomTokenList", "NodeList", "HtmlCollection",
+    "MutationObserver", "MutationObserverInit", "MutationRecord",
+    "console", "Performance"
+]}
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

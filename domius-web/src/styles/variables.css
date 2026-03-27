@@ -1,0 +1,121 @@
+/* Domius Design Tokens - CSS Variables */
+/* Scoped components will use these via [data-domus="<hash>"] */
+
+:root {
+  /* Colors - Primary */
+  --domius-color-primary: #3b82f6;
+  --domius-color-primary-hover: #2563eb;
+  --domius-color-primary-active: #1d4ed8;
+  --domius-color-primary-light: #dbeafe;
+  
+  /* Colors - Semantic */
+  --domius-color-success: #22c55e;
+  --domius-color-warning: #f59e0b;
+  --domius-color-error: #ef4444;
+  --domius-color-info: #0ea5e9;
+  
+  /* Colors - Neutral */
+  --domius-color-white: #ffffff;
+  --domius-color-gray-50: #f9fafb;
+  --domius-color-gray-100: #f3f4f6;
+  --domius-color-gray-200: #e5e7eb;
+  --domius-color-gray-300: #d1d5db;
+  --domius-color-gray-400: #9ca3af;
+  --domius-color-gray-500: #6b7280;
+  --domius-color-gray-600: #4b5563;
+  --domius-color-gray-700: #374151;
+  --domius-color-gray-800: #1f2937;
+  --domius-color-gray-900: #111827;
+  --domius-color-black: #000000;
+  
+  /* Typography */
+  --domius-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --domius-font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  --domius-font-size-xs: 0.75rem;
+  --domius-font-size-sm: 0.875rem;
+  --domius-font-size-base: 1rem;
+  --domius-font-size-lg: 1.125rem;
+  --domius-font-size-xl: 1.25rem;
+  --domius-font-size-2xl: 1.5rem;
+  --domius-font-size-3xl: 1.875rem;
+  --domius-font-size-4xl: 2.25rem;
+  
+  /* Spacing */
+  --domius-spacing-0: 0;
+  --domius-spacing-1: 0.25rem;
+  --domius-spacing-2: 0.5rem;
+  --domius-spacing-3: 0.75rem;
+  --domius-spacing-4: 1rem;
+  --domius-spacing-5: 1.25rem;
+  --domius-spacing-6: 1.5rem;
+  --domius-spacing-8: 2rem;
+  --domius-spacing-10: 2.5rem;
+  --domius-spacing-12: 3rem;
+  --domius-spacing-16: 4rem;
+  
+  /* Border Radius */
+  --domius-radius-none: 0;
+  --domius-radius-sm: 0.125rem;
+  --domius-radius-base: 0.25rem;
+  --domius-radius-md: 0.375rem;
+  --domius-radius-lg: 0.5rem;
+  --domius-radius-xl: 0.75rem;
+  --domius-radius-2xl: 1rem;
+  --domius-radius-full: 9999px;
+  
+  /* Shadows */
+  --domius-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --domius-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --domius-shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --domius-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --domius-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --domius-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --domius-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  /* Transitions */
+  --domius-transition-fast: 150ms;
+  --domius-transition-base: 200ms;
+  --domius-transition-slow: 300ms;
+  --domius-transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Z-index layers */
+  --domius-z-dropdown: 1000;
+  --domius-z-sticky: 1020;
+  --domius-z-fixed: 1030;
+  --domius-z-modal-backdrop: 1040;
+  --domius-z-modal: 1050;
+  --domius-z-popover: 1060;
+  --domius-z-tooltip: 1070;
+  --domius-z-toast: 1080;
+  
+  /* Component-specific */
+  --domius-input-height: 2.5rem;
+  --domius-input-padding-x: 0.75rem;
+  --domius-input-padding-y: 0.5rem;
+  --domius-button-height: 2.5rem;
+  --domius-button-padding-x: 1rem;
+  --domius-modal-max-width: 32rem;
+  --domius-sidebar-width: 16rem;
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --domius-color-primary: #60a5fa;
+    --domius-color-primary-hover: #3b82f6;
+    --domius-color-primary-light: #1e3a5f;
+    
+    --domius-color-white: #111827;
+    --domius-color-gray-50: #1f2937;
+    --domius-color-gray-100: #374151;
+    --domius-color-gray-200: #4b5563;
+    --domius-color-gray-300: #6b7280;
+    --domius-color-gray-400: #9ca3af;
+    --domius-color-gray-500: #d1d5db;
+    --domius-color-gray-600: #e5e7eb;
+    --domius-color-gray-700: #f3f4f6;
+    --domius-color-gray-800: #f9fafb;
+    --domius-color-gray-900: #ffffff;
+    --domius-color-black: #ffffff;
+  }
+}
