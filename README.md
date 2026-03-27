@@ -590,6 +590,63 @@ flowchart TD
 
 ---
 
+## Media Components
+
+Domius provides built-in components for embedding video and audio content.
+
+### Video Player
+
+```rust
+use domius_web::components::video_player::{video_player, VideoPlayerProps};
+
+let video = video_player(VideoPlayerProps {
+    src: "https://example.com/video.mp4".to_string(),
+    controls: true,
+    auto_play: false,
+    loop_video: false,
+    poster: Some("https://example.com/poster.jpg".to_string()),
+    class: Some("my-video".to_string()),
+});
+```
+
+### Audio Player
+
+```rust
+use domius_web::components::audio_player::{audio_player, AudioPlayerProps};
+
+let audio = audio_player(AudioPlayerProps {
+    src: "https://example.com/audio.mp3".to_string(),
+    controls: true,
+    auto_play: false,
+    loop_audio: false,
+    class: Some("my-audio".to_string()),
+});
+```
+
+### Custom Controls with Signals
+
+For advanced use cases, you can build custom controls using `domius_core` signals:
+
+```rust
+use domius_core::signal::{signal, Signal};
+use domius_core::effect::create_effect;
+use web_sys::HtmlMediaElement;
+
+let (is_playing, set_is_playing) = signal(false);
+let (current_time, set_current_time) = signal(0.0);
+
+// Connect to video element
+create_effect(move || {
+    if is_playing.get() {
+        video_element.play().ok();
+    } else {
+        video_element.pause().ok();
+    }
+});
+```
+
+---
+
 ## Advanced Topics
 
 ### Context API
