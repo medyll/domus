@@ -7,7 +7,7 @@ thread_local! {
     /// The effect currently being executed.
     ///
     /// This is used by `Signal::get` to register dependency tracking.
-    pub static RUNNING_EFFECT: RefCell<Option<Rc<Effect>>> = RefCell::new(None);
+    pub static RUNNING_EFFECT: RefCell<Option<Rc<Effect>>> = const { RefCell::new(None) };
 }
 
 /// A reactive effect that automatically tracks its dependencies.
@@ -21,8 +21,6 @@ pub struct Effect {
     /// The closure is wrapped in a Cell to avoid RefCell borrow conflicts.
     /// We use an Option to allow "taking" the closure without holding a borrow.
     execute_fn: Cell<Option<Box<dyn FnMut()>>>,
-    /// Fallback execute for when closure has been taken
-    executed: Cell<bool>,
 }
 
 impl Effect {
@@ -30,7 +28,6 @@ impl Effect {
     pub fn new<F: FnMut() + 'static>(f: F) -> Rc<Self> {
         let effect = Rc::new(Self {
             execute_fn: Cell::new(Some(Box::new(f))),
-            executed: Cell::new(false),
         });
         Self::run(&effect);
         effect

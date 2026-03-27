@@ -5,10 +5,6 @@
 /// and subscribers are notified of changes to the computed value.
 ///
 /// This is the standard pattern for derived/memo values in reactive systems.
-
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::effect::create_effect;
 use crate::signal::{signal, Signal};
 

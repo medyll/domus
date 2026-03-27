@@ -5,10 +5,15 @@
 
 #![warn(missing_docs)]
 
+/// Reactive computed (derived/memo) values.
 pub mod computed;
+/// Reactive effects — auto-tracking closures that re-run on signal change.
 pub mod effect;
+/// Scheduler and batch execution runtime.
 pub mod runtime;
+/// Scope system for grouped effect disposal.
 pub mod scope;
+/// Reactive signal primitives.
 pub mod signal;
 
 pub use computed::{computed, Computed};

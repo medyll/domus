@@ -21,31 +21,20 @@ The framework is written entirely in Rust. The only JavaScript is the `wasm-bind
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Your Application                      │
-│              pages/  ·  components/  ·  routes.rs            │
-└───────────────────────────┬─────────────────────────────────┘
-                            │  DomusComponent / DomusPage traits
-┌───────────────────────────▼─────────────────────────────────┐
-│                        domus-web                             │
-│  component · router · context · list · page · disposal       │
-└──────────┬───────────────────────────────────┬──────────────┘
-           │  domus_core::signal/effect/scope   │  web_sys DOM
-┌──────────▼──────────────┐        ┌───────────▼──────────────┐
-│      domus-core          │        │      wasm-bindgen         │
-│  Signal · Effect · Scope │        │      web-sys · js-sys     │
-└─────────────────────────┘        └──────────────────────────┘
-           │
-┌──────────▼──────────────┐
-│      domus-macro         │
-│  RSX parser · codegen    │
-└─────────────────────────┘
-           │
-┌──────────▼──────────────┐
-│      domus-cli           │
-│  scaffold · css-scoper   │
-└─────────────────────────┘
+```mermaid
+graph TD
+    App["<b>Your Application</b><br/>pages/ · components/ · routes.rs"]
+    Web["<b>domus-web</b><br/>component · router · context · list · page · disposal"]
+    Core["<b>domus-core</b><br/>Signal · Effect · Scope"]
+    WB["<b>wasm-bindgen</b><br/>web-sys · js-sys"]
+    Macro["<b>domus-macro</b><br/>RSX parser · codegen"]
+    CLI["<b>domus-cli</b><br/>scaffold · css-scoper"]
+
+    App -- "DomusComponent / DomusPage traits" --> Web
+    Web -- "domus_core::signal/effect/scope" --> Core
+    Web -- "web_sys DOM" --> WB
+    Core --> Macro
+    Macro --> CLI
 ```
 
 ### Crates

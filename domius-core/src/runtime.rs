@@ -5,18 +5,18 @@ use crate::effect::Effect;
 
 thread_local! {
     /// Primary queue of effects ready to execute immediately.
-    static PRIMARY_QUEUE: RefCell<Vec<Rc<Effect>>> = RefCell::new(Vec::new());
+    static PRIMARY_QUEUE: RefCell<Vec<Rc<Effect>>> = const { RefCell::new(Vec::new()) };
     /// Secondary queue for effects scheduled during a flush (to prevent duplicates in one generation).
-    static SECONDARY_QUEUE: RefCell<Vec<Rc<Effect>>> = RefCell::new(Vec::new());
+    static SECONDARY_QUEUE: RefCell<Vec<Rc<Effect>>> = const { RefCell::new(Vec::new()) };
     /// Nesting depth of batch calls. When > 0, effects are queued instead of run immediately.
-    static BATCH_DEPTH: RefCell<usize> = RefCell::new(0);
+    static BATCH_DEPTH: RefCell<usize> = const { RefCell::new(0) };
     /// Are we currently flushing the queue? This prevents effects scheduled during a flush
     /// from executing immediately and duplicating in the current generation.
-    static IS_FLUSHING: RefCell<bool> = RefCell::new(false);
+    static IS_FLUSHING: RefCell<bool> = const { RefCell::new(false) };
     /// Effects already executed in the current generation (prevents re-entrancy loops).
-    static EXECUTED_THIS_GENERATION: RefCell<Vec<*const Effect>> = RefCell::new(Vec::new());
+    static EXECUTED_THIS_GENERATION: RefCell<Vec<*const Effect>> = const { RefCell::new(Vec::new()) };
     /// Has a flush been scheduled (wasm rAF) to flush the queue?
-    static FLUSH_SCHEDULED: RefCell<bool> = RefCell::new(false);
+    static FLUSH_SCHEDULED: RefCell<bool> = const { RefCell::new(false) };
 }
 
 /// Schedule an effect to be executed. If inside a `batch`, the effect is
@@ -27,7 +27,7 @@ pub(crate) fn schedule_effect(effect: Rc<Effect>) {
 
     // Check if already executed in this generation (prevent re-entrancy loops)
     let already_executed = EXECUTED_THIS_GENERATION.with(|executed| {
-        executed.borrow().iter().any(|&ptr| ptr == effect_ptr)
+        executed.borrow().contains(&effect_ptr)
     });
     if already_executed {
         return; // Ignore re-scheduling of the same effect in the same generation
