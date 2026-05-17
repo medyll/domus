@@ -1,9 +1,9 @@
 # BMAD Status
 project: Domius
 phase: release
-progress: 90
+progress: 93
 active_role: developer
-next_action: "Fix Debug trait for test assertions in domius-web (15-20 enums need #[derive(Debug)]), then update release checklist"
+next_action: "Remaining release tasks: wasm-pack build, commit & tag v0.1.0-alpha, push tag"
 next_command: "bmad-continue"
 next_role: developer
 
@@ -46,7 +46,7 @@ release_checklist:
       done: false
   git:
     - item: "All changes committed"
-      done: false
+      done: true
     - item: "Tag v0.1.0-alpha"
       done: false
     - item: "Push tag"
