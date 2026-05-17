@@ -1,9 +1,9 @@
 # BMAD Status
 project: Domius
 phase: release
-progress: 85
-active_role: reviewer
-next_action: "Fix audit blockers before release: (1) fix/remove dead codegen in domius-macro/codegen.rs, (2) resolve domius-web missing_docs (900 warnings) so clippy -D warnings passes, (3) add resolver='2' to workspace Cargo.toml, (4) clean dead pub fns in css_scoper.rs, then resume release checklist."
+progress: 90
+active_role: developer
+next_action: "Fix Debug trait for test assertions in domius-web (15-20 enums need #[derive(Debug)]), then update release checklist"
 next_command: "bmad-continue"
 next_role: developer
 
@@ -24,7 +24,7 @@ release_checklist:
     - item: "cargo build --workspace --exclude hello-world"
       done: true
     - item: "cargo clippy --workspace --exclude hello-world -- -D warnings"
-      done: false
+      done: true
   documentation:
     - item: "README.md updated"
       done: true
@@ -33,7 +33,7 @@ release_checklist:
     - item: "examples/hello-world/README.md"
       done: true
     - item: "Inline rustdoc on all public items"
-      done: false
+      done: true
   wasm_build:
     - item: "wasm-pack build --target web (hello-world)"
       done: false
@@ -41,7 +41,7 @@ release_checklist:
       done: false
   crate_metadata:
     - item: "Cargo.toml description/license/repository on all crates"
-      done: false
+      done: true
     - item: "Swap path deps to versioned deps before publish"
       done: false
   git:

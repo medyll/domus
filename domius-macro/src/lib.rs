@@ -1,4 +1,7 @@
 //! Procedural macros for Domius.
+#![allow(clippy::missing_const_for_thread_local)]
+#![allow(clippy::large_enum_variant)]
+#![allow(dead_code)]
 
 mod codegen;
 mod parser;

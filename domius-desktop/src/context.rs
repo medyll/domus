@@ -45,10 +45,7 @@ pub fn provide_context<T: 'static + Send + Sync>(value: T) {
 /// Get a context value by type.
 ///
 /// Returns `None` if no context of this type has been provided.
-pub fn use_context<T: 'static + Send + Sync>() -> Option<T>
-where
-    T: Clone,
-{
+pub fn use_context<T: 'static + Send + Sync + Clone>() -> Option<T> {
     let registry = get_registry();
     let registry = registry.lock().unwrap();
     registry
@@ -65,10 +62,7 @@ pub fn has_context<T: 'static>() -> bool {
 }
 
 /// Remove a context.
-pub fn remove_context<T: 'static>() -> Option<T>
-where
-    T: 'static + Send + Sync,
-{
+pub fn remove_context<T: 'static + Send + Sync>() -> Option<T> {
     let registry = get_registry();
     let mut registry = registry.lock().unwrap();
     registry

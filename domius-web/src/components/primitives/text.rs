@@ -8,7 +8,7 @@ use web_sys::{Element, HtmlElement};
 use crate::component::DomiusNode;
 
 /// Text visual variant.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TextVariant {
     /// Body text (default)
     Body,
@@ -66,7 +66,7 @@ impl TextVariant {
 }
 
 /// Text color.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TextColor {
     Primary,
     Secondary,
@@ -129,7 +129,7 @@ pub struct TextProps {
 }
 
 /// Text alignment.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TextAlignment {
     Left,
     Center,

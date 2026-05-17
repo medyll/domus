@@ -5,11 +5,9 @@ use syn::{visit_mut, visit_mut::VisitMut, Expr};
 
 use crate::parser::{RsxAttr, RsxNode};
 
-// ---------------------------------------------------------------------------
-// Counter for unique variable names
-// ---------------------------------------------------------------------------
-
 thread_local! {
+    #[allow(dead_code)]
+    #[allow(clippy::missing_const_for_thread_local)]
     static COUNTER: Cell<usize> = Cell::new(0);
 }
 

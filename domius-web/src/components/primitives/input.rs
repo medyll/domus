@@ -9,7 +9,7 @@ use crate::component::DomiusNode;
 use crate::hooks::use_focus;
 
 /// Input type attribute.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum InputType {
     Text,
     Email,

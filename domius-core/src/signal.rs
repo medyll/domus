@@ -8,23 +8,33 @@ use crate::effect::RUNNING_EFFECT;
 /// Internal non-generic core shared by all signals so we can track them
 /// in a global registry and remove subscribers when effects are disposed.
 pub struct SignalCore {
+    /// List of effects currently subscribed to this signal.
     pub subscribers: RefCell<Vec<Rc<Effect>>>,
 }
 
 impl SignalCore {
+    /// Creates a new SignalCore with no subscribers.
     pub fn new() -> Self {
         Self { subscribers: RefCell::new(Vec::new()) }
     }
 
+    /// Removes the given effect from this signal's subscriber list.
     pub fn remove_subscriber(&self, eff: &Rc<Effect>) {
         let mut subs = self.subscribers.borrow_mut();
         subs.retain(|s| !Rc::ptr_eq(s, eff));
     }
 }
 
+impl Default for SignalCore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 thread_local! {
+    #[allow(clippy::missing_const_for_thread_local)]
     /// Registry of all live signals (weak refs to cores).
-    static SIGNAL_REGISTRY: RefCell<Vec<Weak<SignalCore>>> = RefCell::new(Vec::new());
+    static SIGNAL_REGISTRY: RefCell<Vec<Weak<SignalCore>>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Unsubscribe an effect from all known signals. Used by scope disposal.

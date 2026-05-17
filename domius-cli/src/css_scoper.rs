@@ -113,9 +113,7 @@ pub fn scope_css(css: &str, scope_hash: &str) -> String {
 
             // Closing brace
             '}' => {
-                if depth > 0 {
-                    depth -= 1;
-                }
+                depth = depth.saturating_sub(1);
                 output.push('}');
                 if depth == 0 {
                     in_at_rule = false;

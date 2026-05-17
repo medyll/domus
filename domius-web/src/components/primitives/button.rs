@@ -31,7 +31,7 @@ impl Default for ButtonVariant {
 }
 
 /// Button size.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum ButtonSize {
     /// Small button
     Sm,
@@ -76,7 +76,7 @@ pub struct ButtonProps {
 }
 
 /// Button type attribute.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum ButtonType {
     Button,
     Submit,

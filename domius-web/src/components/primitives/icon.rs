@@ -7,10 +7,10 @@ use web_sys::{Element, SvgElement};
 use crate::component::DomiusNode;
 
 /// Predefined icon names.
-/// 
+///
 /// These are common icons that can be rendered as SVG.
 /// For a production app, you would typically use an icon font or sprite.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum IconName {
     // Navigation
     Menu,

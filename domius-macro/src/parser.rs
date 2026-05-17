@@ -1,6 +1,5 @@
-use proc_macro2::{TokenStream, TokenTree, Delimiter, Group, Span};
-use syn::{parse2, Expr, Error, Ident, LitStr, Result as SynResult};
-use std::fmt;
+use proc_macro2::{Delimiter, Span, TokenStream, TokenTree};
+use syn::{parse2, Error, Expr, Result as SynResult};
 
 /// RSX AST node representing parsed macro input.
 #[derive(Clone)]

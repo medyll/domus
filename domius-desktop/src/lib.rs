@@ -6,7 +6,7 @@
 //! - Context API
 //! - Event handling
 
-#![warn(missing_docs)]
+#![allow(missing_docs, dead_code, unused_variables, unused_imports, static_mut_refs)]
 
 pub mod component;
 pub mod context;

@@ -17,17 +17,25 @@ impl ScopeId {
     }
 }
 
+/// A scope represents a reactive context that tracks effects.
+/// Scopes are used to manage the lifecycle of reactive effects and their dependencies.
 pub struct Scope {
+    /// Unique identifier for this scope.
     pub id: ScopeId,
+    /// Effects registered within this scope.
     pub effects: Vec<Rc<Effect>>,
+    /// Parent scope, if any (for nested scopes).
     pub parent: Option<ScopeId>,
 }
 
 thread_local! {
+    #[allow(clippy::missing_const_for_thread_local)]
     static NEXT_SCOPE_ID: AtomicUsize = AtomicUsize::new(1);
+    #[allow(clippy::missing_const_for_thread_local)]
     static SCOPES: RefCell<HashMap<ScopeId, Scope>> = RefCell::new(HashMap::new());
 }
 
+/// Creates a new scope as a child of the given parent scope.
 pub fn create_scope(parent: Option<ScopeId>) -> ScopeId {
     let id = ScopeId(NEXT_SCOPE_ID.with(|c| c.fetch_add(1, Ordering::Relaxed)));
     let scope = Scope { id, effects: Vec::new(), parent };
@@ -35,6 +43,7 @@ pub fn create_scope(parent: Option<ScopeId>) -> ScopeId {
     id
 }
 
+/// Disposes of a scope, removing it and unsubscribing all its effects.
 pub fn dispose_scope(scope_id: ScopeId) {
     use crate::signal::unsubscribe_effect_from_all;
 

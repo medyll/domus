@@ -270,7 +270,7 @@ pub fn to_snake_case(s: &str) -> String {
 
 /// `"my_component"` / `"my-component"` / `"myComponent"` → `"MyComponent"`
 pub fn to_pascal_case(s: &str) -> String {
-    s.split(|c: char| c == '_' || c == '-')
+    s.split(['_', '-'])
         .map(|word| {
             let mut chars = word.chars();
             match chars.next() {

@@ -134,10 +134,9 @@ impl Toast {
             dismiss_btn.set_text_content(Some("×"));
 
             if let Some(handler) = props.on_dismiss.as_ref() {
-                let handler_clone = handler.clone();
                 let toast_id = props.data.id.clone();
                 let closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
-                    handler_clone(toast_id.clone());
+                    handler(toast_id.clone());
                 }) as Box<dyn FnMut(MouseEvent)>);
                 dismiss_btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                     .unwrap();

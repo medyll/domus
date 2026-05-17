@@ -5,7 +5,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement};
 
 /// Badge visual variant.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum BadgeVariant {
     Primary,
     Secondary,
