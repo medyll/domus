@@ -2,9 +2,9 @@
 project: Domius
 phase: release
 progress: 85
-active_role: architect
-next_action: "Execute release checklist: run cargo clippy, add rustdoc to public items, wasm-pack build hello-world, update Cargo.toml metadata (description/license/repository), swap path deps to versioned deps, then tag v0.1.0-alpha."
-next_command: "bmad continue"
+active_role: reviewer
+next_action: "Fix audit blockers before release: (1) fix/remove dead codegen in domius-macro/codegen.rs, (2) resolve domius-web missing_docs (900 warnings) so clippy -D warnings passes, (3) add resolver='2' to workspace Cargo.toml, (4) clean dead pub fns in css_scoper.rs, then resume release checklist."
+next_command: "bmad-continue"
 next_role: developer
 
 phases:
