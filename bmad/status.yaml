@@ -1,9 +1,9 @@
 # BMAD Status
 project: Domius
 phase: release
-progress: 93
+progress: 97
 active_role: developer
-next_action: "Remaining release tasks: wasm-pack build, commit & tag v0.1.0-alpha, push tag"
+next_action: "Remaining: wasm-pack build (tool not installed), then ready for publish"
 next_command: "bmad-continue"
 next_role: developer
 
@@ -48,9 +48,9 @@ release_checklist:
     - item: "All changes committed"
       done: true
     - item: "Tag v0.1.0-alpha"
-      done: false
+      done: true
     - item: "Push tag"
-      done: false
+      done: true
 
 artifacts:
   prd: done
