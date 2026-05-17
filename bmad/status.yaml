@@ -1,10 +1,10 @@
 # BMAD Status
 project: Domius
 phase: release
-progress: 97
+progress: 99
 active_role: developer
-next_action: "Remaining: wasm-pack build (tool not installed), then ready for publish"
-next_command: "bmad-continue"
+next_action: "Release v0.1.0-alpha complete! wasm-pack build succeeded. Manual browser verification needed."
+next_command: "bmad-status"
 next_role: developer
 
 phases:
@@ -36,7 +36,7 @@ release_checklist:
       done: true
   wasm_build:
     - item: "wasm-pack build --target web (hello-world)"
-      done: false
+      done: true
     - item: "Manual browser verification"
       done: false
   crate_metadata:

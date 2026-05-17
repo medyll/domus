@@ -15,6 +15,11 @@ impl ScopeId {
     pub fn value(self) -> usize {
         self.0
     }
+
+    /// Create a ScopeId from a numeric value.
+    pub fn from_numeric(n: usize) -> Self {
+        Self(n)
+    }
 }
 
 /// A scope represents a reactive context that tracks effects.

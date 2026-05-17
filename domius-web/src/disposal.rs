@@ -23,7 +23,7 @@
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use domius_core::scope::dispose_scope;
+    use domius_core::scope::{dispose_scope, ScopeId};
     use wasm_bindgen::prelude::*;
     use wasm_bindgen::JsCast;
     use web_sys::{MutationObserver, MutationObserverInit, MutationRecord, NodeList};
@@ -77,7 +77,7 @@ mod wasm {
     fn try_dispose_element(element: &web_sys::Element) {
         if let Some(scope_str) = element.get_attribute("data-domius-scope") {
             if let Ok(scope_id) = scope_str.parse::<usize>() {
-                dispose_scope(scope_id);
+                dispose_scope(ScopeId::from_numeric(scope_id));
             }
         }
     }

@@ -36,7 +36,8 @@ fn build_counter(app: &Element) {
     h2.set_text_content(Some("Counter"));
     section.append_child(&h2).unwrap();
 
-    let (count, set_count) = signal(0i32);
+    let count = signal(0i32);
+    let set_count = count.clone();
 
     // Display node
     let display = el("span");
