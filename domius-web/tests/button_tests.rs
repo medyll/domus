@@ -2,6 +2,9 @@
 
 #![cfg(target_arch = "wasm32")]
 
+mod test_utils;
+
+use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
 use domius_web::components::{Button, ButtonProps, ButtonVariant, ButtonSize};
 

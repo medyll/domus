@@ -9,7 +9,7 @@ use web_sys::{Element, HtmlElement, MouseEvent};
 use crate::context::{provide_context, use_context};
 
 /// Toast variant.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ToastVariant {
     Info,
     Success,

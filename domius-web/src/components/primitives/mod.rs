@@ -17,8 +17,8 @@ pub mod countdown;
 pub mod qrcode;
 pub mod scrolltext;
 
-pub use button::{Button, ButtonProps, ButtonVariant, ButtonSize};
-pub use input::{Input, InputProps, InputType};
+pub use button::{Button, ButtonProps, ButtonSize, ButtonType, ButtonVariant};
+pub use input::{Input, InputProps, InputSize, InputType};
 pub use text::{Text, TextProps, TextVariant};
 pub use icon::{Icon, IconProps, IconName};
 pub use card::{card, CardProps};

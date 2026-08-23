@@ -12,8 +12,8 @@ pub mod infinite_scroll;
 pub mod spinner;
 
 // Re-exports
-pub use modal::{Modal, ModalProps};
-pub use toast::{Toast, ToastProps, ToastVariant, ToastManager};
+pub use modal::{Modal, ModalProps, ModalSize};
+pub use toast::{Toast, ToastData, ToastManager, ToastProps, ToastVariant};
 pub use tooltip::{Tooltip, TooltipProps};
 pub use skeleton::{Skeleton, SkeletonProps, SkeletonVariant};
 pub use progress::{ProgressBar, ProgressProps, ProgressVariant};

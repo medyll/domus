@@ -2,6 +2,9 @@
 
 #![cfg(target_arch = "wasm32")]
 
+mod test_utils;
+
+use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
 use domius_web::components::{Input, InputProps, InputType, InputSize};
 
@@ -10,7 +13,6 @@ wasm_bindgen_test_configure!(run_in_browser);
 mod input_tests {
     use super::*;
     use crate::test_utils::*;
-    use domius_core::signal::signal;
 
     #[wasm_bindgen_test]
     fn test_input_creates_element() {
@@ -50,7 +52,7 @@ mod input_tests {
         let (element, _) = Input::create(props);
         
         let input: web_sys::HtmlInputElement = element.dyn_into().expect("should be input element");
-        assert_eq!(input.input_type(), "text");
+        assert_eq!(input.type_(), "text");
     }
 
     #[wasm_bindgen_test]
@@ -100,7 +102,7 @@ mod input_tests {
             let (element, _) = Input::create(props);
             let input: web_sys::HtmlInputElement = element.dyn_into().unwrap();
             
-            assert_eq!(input.input_type(), *expected_type);
+            assert_eq!(input.type_(), *expected_type);
         }
     }
 

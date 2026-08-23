@@ -7,5 +7,5 @@ pub mod use_keyboard;
 pub mod use_focus;
 
 pub use use_click_outside::use_click_outside;
-pub use use_keyboard::use_keyboard;
-pub use use_focus::use_focus;
+pub use use_keyboard::{use_keyboard, KeyboardConfig};
+pub use use_focus::{use_focus, use_focus_auto};

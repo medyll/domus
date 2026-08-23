@@ -15,16 +15,5 @@
 //! wasm-pack test --headless --firefox domius-web -- button_tests
 //! ```
 
-pub mod test_utils;
-
-#[cfg(test)]
-mod button_tests;
-
-#[cfg(test)]
-mod input_tests;
-
-#[cfg(test)]
-mod hooks_tests;
-
-#[cfg(test)]
-mod modal_toast_tests;
+// Each `*_tests.rs` file is an independent Cargo integration-test crate and
+// includes `test_utils` directly.

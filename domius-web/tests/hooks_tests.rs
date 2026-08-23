@@ -2,6 +2,8 @@
 
 #![cfg(target_arch = "wasm32")]
 
+mod test_utils;
+
 use wasm_bindgen_test::*;
 use domius_web::hooks::{use_click_outside, use_keyboard, use_focus, KeyboardConfig};
 
@@ -10,7 +12,6 @@ wasm_bindgen_test_configure!(run_in_browser);
 mod hook_tests {
     use super::*;
     use crate::test_utils::*;
-    use domius_core::signal::signal;
 
     #[wasm_bindgen_test]
     fn test_use_click_outside_detects_outside_click() {
@@ -26,16 +27,16 @@ mod hook_tests {
         
         // Append both to container
         let container = get_element_by_id("test-click-outside").unwrap();
-        container.append_child(target.dyn_ref()).unwrap();
-        container.append_child(outside.dyn_ref()).unwrap();
+        container.append_child(target.as_ref()).unwrap();
+        container.append_child(outside.as_ref()).unwrap();
         
-        let clicked_outside = use_click_outside(target.dyn_ref().unwrap());
+        let clicked_outside = use_click_outside(target.as_ref());
         
         // Initially false
         assert!(!clicked_outside.get());
         
         // Simulate click on outside element
-        simulate_click(outside.dyn_ref().unwrap());
+        simulate_click(outside.as_ref());
         
         // Should be true now
         assert!(clicked_outside.get());
@@ -53,18 +54,18 @@ mod hook_tests {
         child.set_id("child");
         child.set_text_content(Some("Child element"));
         
-        target.append_child(child.dyn_ref()).unwrap();
+        target.append_child(child.as_ref()).unwrap();
         
         let container = get_element_by_id("test-click-inside").unwrap();
-        container.append_child(target.dyn_ref()).unwrap();
+        container.append_child(target.as_ref()).unwrap();
         
-        let clicked_outside = use_click_outside(target.dyn_ref().unwrap());
+        let clicked_outside = use_click_outside(target.as_ref());
         
         // Initially false
         assert!(!clicked_outside.get());
         
         // Simulate click on child element (inside target)
-        simulate_click(child.dyn_ref().unwrap());
+        simulate_click(child.as_ref());
         
         // Should still be false
         assert!(!clicked_outside.get());
@@ -79,7 +80,7 @@ mod hook_tests {
         target.set_text_content(Some("Press Escape"));
         
         let container = get_element_by_id("test-keyboard").unwrap();
-        container.append_child(target.dyn_ref()).unwrap();
+        container.append_child(target.as_ref()).unwrap();
         
         // Create keyboard hook for Escape key
         let escape_pressed = use_keyboard(KeyboardConfig::new("Escape"));
@@ -88,7 +89,7 @@ mod hook_tests {
         assert!(!escape_pressed.get());
         
         // Simulate Escape key press
-        simulate_key_press(target.dyn_ref().unwrap(), "Escape");
+        simulate_key_press(target.as_ref(), "Escape");
         
         // Should be true (or become true after effect runs)
         // Note: This depends on timing of effect execution
@@ -102,7 +103,7 @@ mod hook_tests {
         target.set_id("keyboard-target-2");
         
         let container = get_element_by_id("test-keyboard-ctrl-s").unwrap();
-        container.append_child(target.dyn_ref()).unwrap();
+        container.append_child(target.as_ref()).unwrap();
         
         // Create keyboard hook for Ctrl+S
         let save_pressed = use_keyboard(KeyboardConfig::new("s").with_ctrl());
@@ -120,9 +121,9 @@ mod hook_tests {
         input.set_attribute("type", "text").unwrap();
         
         let container = get_element_by_id("test-focus").unwrap();
-        container.append_child(input.dyn_ref()).unwrap();
+        container.append_child(input.as_ref()).unwrap();
         
-        let (is_focused, focus_cb, blur_cb) = use_focus();
+        let (is_focused, _focus_cb, _blur_cb) = use_focus();
         
         // Initially not focused
         assert!(!is_focused.get());
@@ -142,9 +143,9 @@ mod hook_tests {
         input.set_attribute("type", "text").unwrap();
         
         let container = get_element_by_id("test-focus-auto").unwrap();
-        container.append_child(input.dyn_ref()).unwrap();
+        container.append_child(input.as_ref()).unwrap();
         
-        let is_focused = use_focus_auto(input.dyn_ref().unwrap());
+        let is_focused = use_focus_auto(input.as_ref());
         
         // Initially not focused
         assert!(!is_focused.get());

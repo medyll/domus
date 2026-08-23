@@ -2,6 +2,9 @@
 
 #![cfg(target_arch = "wasm32")]
 
+mod test_utils;
+
+use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
 use domius_core::signal::signal;
 
@@ -119,7 +122,6 @@ mod modal_tests {
 
 mod toast_tests {
     use super::*;
-    use crate::test_utils::*;
     use domius_web::components::{ToastManager, ToastVariant, ToastData};
 
     #[wasm_bindgen_test]

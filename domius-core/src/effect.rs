@@ -89,7 +89,7 @@ pub(crate) fn schedule_effect(effect: Rc<Effect>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::signal::{signal, Signal};
+    use crate::signal::signal;
     use std::cell::RefCell;
     use std::rc::Rc;
 

@@ -72,35 +72,44 @@ fn signal<T: Clone + 'static>(value: T) -> Signal<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn event_bridge_emit_and_handle() {
-        use std::cell::RefCell;
-        use std::rc::Rc;
-
         let mut bridge = EventBridge::new();
-        let received = Rc::new(RefCell::new(Vec::new()));
+        let received = Arc::new(Mutex::new(Vec::new()));
 
-        let received_clone = Rc::clone(&received);
+        let received_clone = Arc::clone(&received);
         bridge.on(move |event| {
-            received_clone.borrow_mut().push(format!("{:?}", event));
+            received_clone
+                .lock()
+                .expect("received event lock should not be poisoned")
+                .push(format!("{:?}", event));
         });
 
         bridge.emit(DesktopEvent::WindowFocus);
         bridge.emit(DesktopEvent::WindowBlur);
 
-        assert_eq!(received.borrow().len(), 2);
+        assert_eq!(
+            received
+                .lock()
+                .expect("received event lock should not be poisoned")
+                .len(),
+            2
+        );
     }
 
     #[test]
     fn event_bridge_custom_event() {
         let mut bridge = EventBridge::new();
-        let received = Rc::new(RefCell::new(None));
+        let received = Arc::new(Mutex::new(None));
 
-        let received_clone = Rc::clone(&received);
+        let received_clone = Arc::clone(&received);
         bridge.on(move |event| {
             if let DesktopEvent::Custom { name, payload } = event {
-                *received_clone.borrow_mut() = Some((name, payload));
+                *received_clone
+                    .lock()
+                    .expect("received event lock should not be poisoned") = Some((name, payload));
             }
         });
 
@@ -109,6 +118,11 @@ mod tests {
             payload: "data".into(),
         });
 
-        assert_eq!(received.borrow(), &Some(("test".into(), "data".into())));
+        assert_eq!(
+            *received
+                .lock()
+                .expect("received event lock should not be poisoned"),
+            Some(("test".into(), "data".into()))
+        );
     }
 }

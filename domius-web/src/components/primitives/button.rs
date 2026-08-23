@@ -1,13 +1,11 @@
 //! Button component - A clickable button with various styles and states.
 
 use domius_core::signal::Signal;
-use domius_core::effect::create_effect;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Element, HtmlButtonElement, MouseEvent, FocusEvent};
+use web_sys::{Element, HtmlButtonElement};
 
 use crate::component::{DomiusComponent, DomiusNode};
-use crate::hooks::use_focus;
 
 /// Button visual variant.
 #[derive(Clone, PartialEq, Debug)]
@@ -128,6 +126,77 @@ pub struct ButtonState {
 /// mount_component::<Button>(&button_props, &parent);
 /// ```
 pub struct Button;
+
+impl Button {
+    /// Create a configured button element and its reactive state.
+    pub fn create(props: ButtonProps) -> (Element, ButtonState) {
+        let document = web_sys::window()
+            .expect("no window")
+            .document()
+            .expect("no document");
+
+        let button: HtmlButtonElement = document
+            .create_element("button")
+            .expect("failed to create button")
+            .dyn_into()
+            .expect("button element has unexpected type");
+
+        let mut classes = vec![
+            "domius-btn".to_string(),
+            format!("domius-btn-{:?}", props.variant).to_lowercase(),
+            format!("domius-btn-{:?}", props.size).to_lowercase(),
+        ];
+        if props.full_width {
+            classes.push("domius-btn-full-width".to_string());
+        }
+        if props.loading {
+            classes.push("domius-btn-loading".to_string());
+        }
+        if let Some(class) = props.class {
+            classes.push(class);
+        }
+        button
+            .set_attribute("class", &classes.join(" "))
+            .expect("failed to set button classes");
+
+        let button_type = match props.button_type {
+            ButtonType::Button => "button",
+            ButtonType::Submit => "submit",
+            ButtonType::Reset => "reset",
+        };
+        button
+            .set_attribute("type", button_type)
+            .expect("failed to set button type");
+        button.set_disabled(props.disabled || props.loading);
+
+        let text = if props.loading {
+            props.loading_text.unwrap_or_else(|| "Loading...".to_string())
+        } else {
+            [props.left_icon, Some(props.children), props.right_icon]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        button.set_text_content(Some(&text));
+
+        if let Some(handler) = props.on_click {
+            let closure = Closure::wrap(handler as Box<dyn Fn()>);
+            button
+                .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                .expect("failed to register click handler");
+            closure.forget();
+        }
+
+        let state = ButtonState {
+            is_hovered: domius_core::signal::signal(false),
+            is_pressed: domius_core::signal::signal(false),
+            is_focused: domius_core::signal::signal(false),
+        };
+
+        (button.into(), state)
+    }
+}
 
 impl DomiusComponent for Button {
     type Props = ButtonProps;
