@@ -7,7 +7,9 @@ use wasm_bindgen::JsValue;
 use web_sys::Element;
 
 use crate::components::app_navigation;
-use crate::pages::{IncidentsPage, OverviewPage, ServiceDetailPage, ServiceDetailProps};
+use crate::pages::{
+    IncidentsPage, OverviewPage, ReportsPage, ServiceDetailPage, ServiceDetailProps,
+};
 use crate::routes::{router, AppRoute};
 use crate::state::MonitoringContext;
 
@@ -76,8 +78,9 @@ fn render_path(host: &Element, path: &str) -> Result<(), JsValue> {
             IncidentsPage::render(&state)
         }
         AppRoute::Reports => {
-            document.set_title("Reports | Domius");
-            placeholder("Reports", "Implementation follows incidents")
+            let state = ReportsPage::setup(());
+            document.set_title(&ReportsPage::title(&state));
+            ReportsPage::render(&state)
         }
         AppRoute::NotFound => {
             document.set_title("Page not found | Domius");
