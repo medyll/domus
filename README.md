@@ -781,16 +781,16 @@ cargo test --workspace
 Test breakdown:
 
 ```
-domius-cli   35 tests   CSS scoper · scaffolding · naming
+domius-cli   36 tests   CSS scoper · scaffolding · naming · dependency policy
 domius-core  19 tests   signals · effects · batching · diamonds
 domius-desktop 10 tests components · events · context
-domius-macro 38 tests   RSX parsing · codegen
+domius-macro 40 tests   RSX parsing · public expansion · codegen
 domius-web   78 tests   components · router · context · lists
 ────────────────────────────────────────────────
-            180 native tests + 1 doctest passing
+            183 native tests + 1 doctest passing
 ```
 
-Run the 32 browser integration tests with:
+Run the 34 browser integration tests with:
 
 ```bash
 wasm-pack test --headless --chrome domius-web
