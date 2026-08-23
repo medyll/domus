@@ -54,7 +54,7 @@ flowchart TB
     subgraph Backend["Choose Your Backend"]
         direction LR
         Web[domius-web<br/>WASM/Web]
-        Desktop[domius-desktop<br/>Tauri]
+        Desktop[domius-desktop<br/>Independent runtime, in development]
     end
     
     subgraph Core["domius-core<br/>100% Rust, platform-agnostic"]
@@ -79,7 +79,7 @@ flowchart TB
 | **Small** | No Virtual DOM = less code = smaller bundles |
 | **Simple** | Write Rust, not JavaScript. No complex build chains |
 | **Precise** | Only the exact node that changed gets updated |
-| **Cross-platform** | Same code for Web (WASM) and Desktop (Tauri) |
+| **Cross-platform model** | The reactive core is shared by Web and the independent desktop runtime |
 
 ### When to Use Domus
 
@@ -131,26 +131,19 @@ npx serve .
 
 Open `http://localhost:3000` in your browser.
 
-#### Desktop (Tauri)
+#### Desktop
 
-```bash
-# Scaffold a new desktop project  
-domus new project my-app-desktop --tauri
-cd my-app-desktop
-
-# Install Tauri CLI
-cargo install tauri-cli
-
-# Run in development mode
-cargo tauri dev
-```
+The independent Domius desktop runtime is under construction. The current
+`domius-desktop` crate exposes platform-neutral component, context, event, and
+scope primitives, but does not yet provide a runnable window host or packager.
+See `examples/desktop-project-command/README.md` for the implementation contract.
 
 ### Project Structure
 
 ```
 my-app/
 ├── Cargo.toml          # Rust dependencies
-├── index.html          # Entry point (web) / src-tauri/tauri.conf.json (desktop)
+├── index.html          # Web entry point
 └── src/
     ├── lib.rs          # Your main Rust code
     └── routes.rs       # URL routing (web) or window management (desktop)
@@ -169,7 +162,7 @@ domius-web = "0.1"       # Web backend (WASM)
 # For Desktop
 [dependencies]
 domius-core = "0.1"      # Reactive core (always required)
-domius-desktop = "0.1"   # Desktop backend (Tauri)
+domius-desktop = "0.1"   # Independent desktop runtime foundation (experimental)
 ```
 
 **Why two crates?**
@@ -469,7 +462,7 @@ flowchart TB
     
     subgraph Backends["Platform Backends"]
         B1[domius-web<br/>WASM/Web]
-        B2[domius-desktop<br/>Tauri]
+        B2[domius-desktop<br/>Independent runtime]
     end
     
     subgraph Core["domius-core<br/>100% Rust std"]
@@ -499,7 +492,7 @@ flowchart TB
 |-------|---------|----------|
 | `domius-core` | Reactive primitives: `Signal`, `Effect`, `Scope`, `batch` | All |
 | `domius-web` | Component system, router, DOM manipulation | Web (WASM) |
-| `domius-desktop` | Component system, Tauri integration | Desktop (Tauri) |
+| `domius-desktop` | Window component, context, event, and scope foundations | Desktop (experimental) |
 | `domius-macro` | RSX proc-macro: parses declarative UI syntax | All |
 | `domius-cli` | CLI scaffolding (`domus new`, `domus add`) | All |
 
@@ -507,9 +500,9 @@ flowchart TB
 
 | Feature | domius-web | domius-desktop |
 |---------|------------|----------------|
-| **Target** | WASM in browser | Native window (Tauri) |
-| **DOM** | `web_sys` APIs | Tauri webview |
-| **Events** | Browser events | Tauri commands |
+| **Target** | WASM in browser | Native desktop process (runtime pending) |
+| **Rendering** | `web_sys` APIs | Private platform adapter (pending) |
+| **Events** | Browser events | Domius event bridge |
 | **Disposal** | `MutationObserver` | Window close events |
 | **Bundle** | `.wasm` + JS | Native binary |
 
@@ -817,7 +810,7 @@ wasm-pack test --headless --chrome domius-web
 - ✅ Diamond convergence (single execution)
 - ✅ Re-entrancy prevention
 - ✅ Glitch-free updates
-- ✅ RSX macro (Rust + HTML syntax)
+- ✅ RSX parser and code generator tests (Rust + HTML syntax)
 - ✅ Component system
 - ✅ Page system with routing
 - ✅ Context API
@@ -825,16 +818,18 @@ wasm-pack test --headless --chrome domius-web
 - ✅ Automatic CSS scoping
 - ✅ CLI scaffolding
 - ✅ Web backend (`domius-web`) with MutationObserver disposal
-- ✅ Desktop backend (`domius-desktop`) with Tauri integration
+- ✅ Platform-neutral desktop component, context, event, and scope foundations
 
 **Coming soon:**
-- [ ] `cargo clippy` clean pass
-- [ ] Public API documentation (`cargo doc`)
+- [ ] Connect the public RSX macro to its code generator
+- [ ] Implement the independent desktop window and webview runtime
+- [ ] Add typed commands and secured frontend/native messaging
+- [ ] Add desktop development, build, and packaging commands
 - [ ] Publish to crates.io
 - [ ] Dev server with file watching
 - [ ] Error boundaries
 - [ ] Server-side rendering (SSR) / hydration
-- [ ] Mobile support (iOS/Android via Tauri Mobile)
+- [ ] Mobile platform adapters after the desktop runtime is stable
 
 ---
 
@@ -850,24 +845,14 @@ wasm-pack build --target web
 npx serve .
 ```
 
-### Desktop (Tauri)
+### Planned full-library applications
 
-See `examples/hello-world-tauri` for a desktop counter application.
-
-```bash
-cd examples/hello-world-tauri
-
-# Install Tauri CLI if needed
-cargo install tauri-cli
-
-# Run in development mode
-cargo tauri dev
-
-# Build for production
-cargo tauri build
-```
-
-**Note:** Building Tauri apps requires additional system dependencies. See the [Tauri documentation](https://v2.tauri.app/start/prerequisites/) for details.
+- `examples/operations-control-center/README.md` covers the reactive runtime,
+  routing, data display, and analytical components.
+- `examples/collaborative-media-studio/README.md` covers RSX, components, forms,
+  media, hooks, and portals.
+- `examples/desktop-project-command/README.md` specifies the independent Domius
+  desktop runtime, multi-window events, and CLI contract.
 
 ---
 

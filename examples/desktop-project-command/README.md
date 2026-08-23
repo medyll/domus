@@ -61,20 +61,21 @@ Le gestionnaire ouvre le portefeuille, choisit un projet et passe de la vue Kanb
 
 ## API Domius attribuée à cet exemple
 
-### Correction d'architecture préalable
+### Frontière d'architecture acquise
 
-`domius-desktop/Cargo.toml` dépend actuellement de `tauri`, et plusieurs commentaires présentent Domius comme un backend Tauri. Cette direction contredit le rôle du projet. Avant de construire l'exemple, OpenCode doit :
+La migration zéro-Tauri a retiré la dépendance, l'ancien exemple et les
+instructions de lancement qui contredisaient le rôle de Domius. Le travail de
+cet exemple commence donc sur un graphe propre. OpenCode doit maintenant :
 
-- retirer la dépendance publique à Tauri et le vocabulaire associé ;
 - définir des types Domius pour le runtime, les fenêtres, les commandes et les événements ;
 - isoler le moteur de fenêtre ou de webview derrière un module privé ;
 - faire du cycle de vie Domius la source de vérité pour les scopes ;
 - exposer une boucle `run` et un builder d'application utilisables sans outil externe ;
-- conserver les API publiques déjà utiles lorsqu'elles ne portent aucune hypothèse Tauri.
+- conserver les API publiques déjà utiles lorsqu'elles ne portent aucune hypothèse de plateforme.
 
-L'ancien dossier `examples/hello-world-tauri` constitue une application Tauri réelle et ne peut pas rester l'exemple desktop de Domius. Il doit être remplacé par un exemple utilisant le runner Domius, puis retiré dès que la nouvelle application couvre son petit compteur. Le README racine doit être corrigé dans la même passe : architecture, installation, commandes, tableau des crates et feuille de route.
-
-Critère de sortie de cette étape zéro : `cargo tree -p domius-desktop` ne contient plus `tauri`, le workspace ne référence plus `tauri-build` ni `tauri-macros`, et aucun exemple actif ne demande d'installer le CLI Tauri.
+Le contrôle `cargo tree -p domius-desktop` doit continuer à prouver l'absence de
+framework applicatif concurrent. Aucun exemple actif ne demande l'installation
+d'un CLI extérieur à Domius.
 
 La couche minimale visée peut reposer sur `wry` et `tao`, mais les exemples et les utilisateurs ne doivent jamais importer ces crates directement. Si une autre base plus légère répond mieux aux tests multi-plateformes, consigner le choix dans le journal de décisions avant l'implémentation.
 
@@ -152,7 +153,7 @@ Le dossier peut adapter cette structure au moteur natif retenu, mais il doit con
 
 ## Ordre de travail
 
-1. Extraire Tauri de `domius-desktop` et poser les types publics du runtime Domius.
+1. Poser les types publics du runtime Domius et leur modèle d'erreur.
 2. Corriger le CLI afin qu'un projet et ses ajouts compilent dès leur génération.
 3. Créer une première fenêtre avec le runner Domius, puis valider démarrage et arrêt.
 4. Implémenter la destruction sur fermeture, les commandes et la souscription d'événements.
