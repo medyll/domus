@@ -22,16 +22,16 @@ use web_sys::{Element, Event, Window};
 /// ```
 pub fn use_click_outside(element: &Element) -> Signal<bool> {
     use domius_core::signal::signal;
-    
+
     let clicked = signal(false);
-    
+
     let element_weak = element.clone();
     let clicked_clone = clicked.clone();
-    
+
     let closure = Closure::wrap(Box::new(move |event: Event| {
         // Check if the click target is outside our element
         let target = event.target().and_then(|t| t.dyn_into::<Element>().ok());
-        
+
         if let Some(target_el) = target {
             // Check if target is the element or a descendant
             let is_inside = element_weak.contains(Some(&target_el));
@@ -42,14 +42,14 @@ pub fn use_click_outside(element: &Element) -> Signal<bool> {
             }
         }
     }) as Box<dyn FnMut(Event)>);
-    
+
     if let Some(window) = web_sys::window() {
         window
             .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .expect("Failed to add click outside listener");
         closure.forget();
     }
-    
+
     clicked
 }
 
@@ -67,7 +67,7 @@ where
     F: Fn() + 'static,
 {
     let clicked = use_click_outside(element);
-    
+
     create_effect(move || {
         if clicked.get() {
             callback();

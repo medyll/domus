@@ -29,9 +29,9 @@ pub struct AnchorProps {
 /// Build an Anchor component.
 pub fn anchor(props: AnchorProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("anchor");
     if let Some(class) = &props.class {
         classes.push_str(" ");
@@ -58,7 +58,7 @@ pub fn anchor(props: AnchorProps) -> Element {
         a.set_class_name("anchor-link");
         a.set_attribute("href", &link.href).ok();
         a.set_text_content(Some(&link.title));
-        
+
         li.append_child(&a).unwrap();
         list.append_child(&li).unwrap();
     }

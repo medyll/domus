@@ -91,7 +91,9 @@ mod tests {
             user: String,
         }
 
-        provide_context(AuthContext { user: "alice".into() });
+        provide_context(AuthContext {
+            user: "alice".into(),
+        });
         let ctx = use_context::<AuthContext>().unwrap();
         assert_eq!(ctx.user, "alice");
     }
@@ -151,16 +153,23 @@ mod tests {
         provide_context(LocaleCtx { lang: "fr".into() });
 
         assert_eq!(use_context::<ThemeCtx>().unwrap(), ThemeCtx { dark: true });
-        assert_eq!(use_context::<LocaleCtx>().unwrap(), LocaleCtx { lang: "fr".into() });
+        assert_eq!(
+            use_context::<LocaleCtx>().unwrap(),
+            LocaleCtx { lang: "fr".into() }
+        );
     }
 
     #[test]
     fn test_many_context_types() {
         reset();
-        #[derive(Clone)] struct A(u8);
-        #[derive(Clone)] struct B(u16);
-        #[derive(Clone)] struct C(u32);
-        #[derive(Clone)] struct D(u64);
+        #[derive(Clone)]
+        struct A(u8);
+        #[derive(Clone)]
+        struct B(u16);
+        #[derive(Clone)]
+        struct C(u32);
+        #[derive(Clone)]
+        struct D(u64);
 
         provide_context(A(1));
         provide_context(B(2));
@@ -205,8 +214,10 @@ mod tests {
     #[test]
     fn test_clear_all_removes_everything() {
         reset();
-        #[derive(Clone)] struct X;
-        #[derive(Clone)] struct Y;
+        #[derive(Clone)]
+        struct X;
+        #[derive(Clone)]
+        struct Y;
         provide_context(X);
         provide_context(Y);
         clear_all_contexts();
@@ -224,7 +235,9 @@ mod tests {
             value: Vec<i32>,
         }
 
-        provide_context(Config { value: vec![1, 2, 3] });
+        provide_context(Config {
+            value: vec![1, 2, 3],
+        });
         let mut ctx = use_context::<Config>().unwrap();
         ctx.value.push(99); // mutate the clone
 

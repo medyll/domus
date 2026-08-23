@@ -2,7 +2,7 @@
 //!
 //! Listens to window close events and disposes associated scopes.
 
-use domius_core::{ScopeId, dispose_scope};
+use domius_core::{dispose_scope, ScopeId};
 
 /// Initialize event listeners for automatic scope disposal.
 ///

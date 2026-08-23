@@ -94,22 +94,28 @@ mod tests {
 
     #[test]
     fn context_has_context() {
-        provide_context(AppConfig {
-            theme: "light".into(),
-        });
+        #[derive(Clone)]
+        struct PresenceMarker;
 
-        assert!(has_context::<AppConfig>());
+        provide_context(PresenceMarker);
+
+        assert!(has_context::<PresenceMarker>());
         assert!(!has_context::<Vec<i32>>());
     }
 
     #[test]
     fn context_remove() {
-        provide_context(AppConfig {
+        #[derive(Clone, Debug, PartialEq)]
+        struct RemovableConfig {
+            theme: String,
+        }
+
+        provide_context(RemovableConfig {
             theme: "auto".into(),
         });
 
-        let removed = remove_context::<AppConfig>();
-        assert!(removed.is_some());
-        assert!(!has_context::<AppConfig>());
+        let removed = remove_context::<RemovableConfig>();
+        assert_eq!(removed.unwrap().theme, "auto");
+        assert!(!has_context::<RemovableConfig>());
     }
 }

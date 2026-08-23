@@ -85,11 +85,7 @@ impl Badge {
             .document()
             .expect("no document");
 
-        let badge: HtmlElement = document
-            .create_element("span")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let badge: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
 
         // Build class names
         let mut classes = vec![
@@ -107,33 +103,22 @@ impl Badge {
 
         // Add dot indicator if requested
         if props.dot {
-            let dot: HtmlElement = document
-                .create_element("span")
-                .unwrap()
-                .dyn_into()
+            let dot: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
+            dot.set_attribute("class", "domius-badge-dot-indicator")
                 .unwrap();
-            dot.set_attribute("class", "domius-badge-dot-indicator").unwrap();
             badge.append_child(&dot).unwrap();
         }
 
         // Add icon if provided
         if let Some(icon) = &props.icon {
-            let icon_el: HtmlElement = document
-                .create_element("span")
-                .unwrap()
-                .dyn_into()
-                .unwrap();
+            let icon_el: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
             icon_el.set_attribute("class", "domius-badge-icon").unwrap();
             icon_el.set_text_content(Some(icon));
             badge.append_child(&icon_el).unwrap();
         }
 
         // Add text content
-        let text: HtmlElement = document
-            .create_element("span")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let text: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
         text.set_attribute("class", "domius-badge-text").unwrap();
         text.set_text_content(Some(&props.children));
         badge.append_child(&text).unwrap();

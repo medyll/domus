@@ -53,10 +53,10 @@ impl Default for VideoPlayerProps {
 /// ```
 pub fn video_player(props: VideoPlayerProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     // Create video element
     let video: Element = document.create_element("video").unwrap();
-    
+
     if let Some(class) = &props.class {
         video.set_class_name(class);
     }
@@ -70,7 +70,7 @@ pub fn video_player(props: VideoPlayerProps) -> Element {
         video.set_attribute("loop", "").ok();
     }
     video.set_attribute("src", &props.src).ok();
-    
+
     if let Some(poster) = &props.poster {
         video.set_attribute("poster", poster).ok();
     }

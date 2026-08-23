@@ -21,7 +21,7 @@ pub struct RowProps {
 pub fn row(props: RowProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
     let row: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("row");
     if let Some(class) = &props.class {
         classes.push_str(" ");
@@ -30,7 +30,15 @@ pub fn row(props: RowProps) -> Element {
     row.set_class_name(&classes);
 
     if props.gutter > 0 {
-        row.set_attribute("style", &format!("margin-left: -{}px; margin-right: -{}px;", props.gutter / 2, props.gutter / 2)).ok();
+        row.set_attribute(
+            "style",
+            &format!(
+                "margin-left: -{}px; margin-right: -{}px;",
+                props.gutter / 2,
+                props.gutter / 2
+            ),
+        )
+        .ok();
     }
 
     if let Some(align) = &props.align {
@@ -68,9 +76,9 @@ pub struct ColProps {
 pub fn col(props: ColProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
     let col: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("col");
-    
+
     if let Some(span) = props.span {
         classes.push_str(&format!(" col-{}", span));
     }
@@ -96,7 +104,7 @@ pub fn col(props: ColProps) -> Element {
         classes.push_str(" ");
         classes.push_str(class);
     }
-    
+
     col.set_class_name(&classes);
     col
 }

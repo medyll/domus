@@ -52,10 +52,10 @@ pub struct SpinnerProps {
 /// ```
 pub fn spinner(props: SpinnerProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
     let mut classes = String::from("spinner");
-    
+
     if let Some(class) = &props.class {
         classes.push_str(" ");
         classes.push_str(class);
@@ -80,7 +80,9 @@ pub fn spinner(props: SpinnerProps) -> Element {
 
     // Color
     if let Some(color) = &props.color {
-        container.set_attribute("style", &format!("--spinner-color: {};", color)).ok();
+        container
+            .set_attribute("style", &format!("--spinner-color: {};", color))
+            .ok();
     }
 
     // Spinner SVG (circular)
@@ -89,7 +91,7 @@ pub fn spinner(props: SpinnerProps) -> Element {
         let svg = document.create_element_ns(Some(svg_ns), "svg").unwrap();
         svg.set_attribute("viewBox", "0 0 50 50").ok();
         svg.set_attribute("class", "spinner-svg").ok();
-        
+
         let circle = document.create_element_ns(Some(svg_ns), "circle").unwrap();
         circle.set_attribute("cx", "25").ok();
         circle.set_attribute("cy", "25").ok();
@@ -99,7 +101,7 @@ pub fn spinner(props: SpinnerProps) -> Element {
         circle.set_attribute("stroke-width", "4").ok();
         circle.set_attribute("stroke-dasharray", "80 20").ok();
         circle.set_attribute("class", "spinner-circle").ok();
-        
+
         svg.append_child(&circle).unwrap();
         container.append_child(&svg).unwrap();
     } else if props.spinner_type == SpinnerType::Dots {

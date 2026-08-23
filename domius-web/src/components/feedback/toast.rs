@@ -1,7 +1,7 @@
 //! Toast/Snackbar component - Non-intrusive notifications.
 
-use domius_core::signal::{signal, Signal};
 use domius_core::effect::create_effect;
+use domius_core::signal::{signal, Signal};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement, MouseEvent};
@@ -9,7 +9,7 @@ use web_sys::{Element, HtmlElement, MouseEvent};
 use crate::context::{provide_context, use_context};
 
 /// Toast variant.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ToastVariant {
     Info,
     Success,
@@ -71,11 +71,7 @@ impl Toast {
             .document()
             .expect("no document");
 
-        let toast: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let toast: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
 
         let mut classes = vec![
             "domius-toast".to_string(),
@@ -84,40 +80,30 @@ impl Toast {
         toast.set_attribute("class", &classes.join(" ")).unwrap();
 
         // Icon
-        let icon: HtmlElement = document
-            .create_element("span")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let icon: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
         icon.set_attribute("class", "domius-toast-icon").unwrap();
         icon.set_text_content(Some(props.data.variant.as_icon()));
         toast.append_child(&icon).unwrap();
 
         // Content
-        let content: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
+        let content: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+        content
+            .set_attribute("class", "domius-toast-content")
             .unwrap();
-        content.set_attribute("class", "domius-toast-content").unwrap();
 
         if let Some(title) = &props.data.title {
-            let title_el: HtmlElement = document
-                .create_element("div")
-                .unwrap()
-                .dyn_into()
+            let title_el: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+            title_el
+                .set_attribute("class", "domius-toast-title")
                 .unwrap();
-            title_el.set_attribute("class", "domius-toast-title").unwrap();
             title_el.set_text_content(Some(title));
             content.append_child(&title_el).unwrap();
         }
 
-        let message_el: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
+        let message_el: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+        message_el
+            .set_attribute("class", "domius-toast-message")
             .unwrap();
-        message_el.set_attribute("class", "domius-toast-message").unwrap();
         message_el.set_text_content(Some(&props.data.message));
         content.append_child(&message_el).unwrap();
 
@@ -130,7 +116,9 @@ impl Toast {
                 .unwrap()
                 .dyn_into()
                 .unwrap();
-            dismiss_btn.set_attribute("class", "domius-toast-dismiss").unwrap();
+            dismiss_btn
+                .set_attribute("class", "domius-toast-dismiss")
+                .unwrap();
             dismiss_btn.set_text_content(Some("×"));
 
             if let Some(handler) = props.on_dismiss.as_ref() {
@@ -138,7 +126,8 @@ impl Toast {
                 let closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
                     handler(toast_id.clone());
                 }) as Box<dyn FnMut(MouseEvent)>);
-                dismiss_btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                dismiss_btn
+                    .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                     .unwrap();
                 closure.forget();
             }
@@ -248,29 +237,28 @@ impl ToastContainer {
             .document()
             .expect("no document");
 
-        let container: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
+        let container: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+        container
+            .set_attribute("class", "domius-toast-container")
             .unwrap();
-        container.set_attribute("class", "domius-toast-container").unwrap();
 
         // Get toast manager from context or create new one
-        let manager = use_context::<ToastManager>()
-            .unwrap_or_else(|| {
-                let m = ToastManager::new();
-                provide_context(m.clone());
-                m
-            });
+        let manager = use_context::<ToastManager>().unwrap_or_else(|| {
+            let m = ToastManager::new();
+            provide_context(m.clone());
+            m
+        });
 
         // Render toasts reactively
         let container_clone = container.clone();
         create_effect(move || {
             let toasts = manager.toasts.get();
-            
+
             // Clear container
             while container_clone.first_child().is_some() {
-                container_clone.remove_child(&container_clone.first_child().unwrap()).ok();
+                container_clone
+                    .remove_child(&container_clone.first_child().unwrap())
+                    .ok();
             }
 
             // Add each toast

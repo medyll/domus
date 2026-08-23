@@ -42,9 +42,9 @@ pub struct DividerProps {
 /// ```
 pub fn divider(props: DividerProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let divider: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("divider");
     if props.orientation == DividerOrientation::Vertical {
         classes.push_str(" divider-vertical");

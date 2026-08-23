@@ -7,3 +7,6 @@ members = [
   "domius-cli",
   "domius-desktop",
 ]
+
+[profile.release]
+opt-level = 3

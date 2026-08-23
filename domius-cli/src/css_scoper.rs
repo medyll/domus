@@ -30,7 +30,11 @@ pub fn generate_scope_hash(path: &str, content: &str) -> String {
     const FNV_PRIME: u64 = 1099511628211;
 
     let mut hash: u64 = FNV_OFFSET;
-    for byte in path.bytes().chain(b"|".iter().copied()).chain(content.bytes()) {
+    for byte in path
+        .bytes()
+        .chain(b"|".iter().copied())
+        .chain(content.bytes())
+    {
         hash ^= byte as u64;
         hash = hash.wrapping_mul(FNV_PRIME);
     }

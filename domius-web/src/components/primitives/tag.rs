@@ -44,9 +44,9 @@ pub struct TagProps {
 /// ```
 pub fn tag(props: TagProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("span").unwrap();
-    
+
     let mut classes = String::from("tag");
     match &props.color {
         TagColor::Default => classes.push_str(" tag-default"),
@@ -72,8 +72,10 @@ pub fn tag(props: TagProps) -> Element {
         let close_btn: Element = document.create_element("button").unwrap();
         close_btn.set_class_name("tag-close");
         close_btn.set_inner_html("&#215;"); // × symbol
-        
-        close_btn.set_attribute("onclick", "this.parentElement.remove()").ok();
+
+        close_btn
+            .set_attribute("onclick", "this.parentElement.remove()")
+            .ok();
 
         container.append_child(&close_btn).unwrap();
     }

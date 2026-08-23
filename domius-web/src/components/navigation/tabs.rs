@@ -92,36 +92,29 @@ impl Tabs {
             .expect("no document");
 
         // Determine initial active tab
-        let initial_active = props.default_tab.clone()
+        let initial_active = props
+            .default_tab
+            .clone()
             .or_else(|| props.tabs.first().map(|t| t.id.clone()))
             .unwrap_or_else(|| String::new());
 
         let active_signal = signal(initial_active.clone());
 
         // Create container
-        let container: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let container: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
 
         // Build class names
         let mut classes = vec!["domius-tabs".to_string()];
-        classes.push(format!(
-            "domius-tabs-{:?}",
-            props.orientation
-        ).to_lowercase());
+        classes.push(format!("domius-tabs-{:?}", props.orientation).to_lowercase());
         if let Some(class) = &props.class {
             classes.push(class.clone());
         }
-        container.set_attribute("class", &classes.join(" ")).unwrap();
+        container
+            .set_attribute("class", &classes.join(" "))
+            .unwrap();
 
         // Create tab list
-        let tab_list: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let tab_list: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
         tab_list.set_attribute("class", "domius-tab-list").unwrap();
         tab_list.set_attribute("role", "tablist").unwrap();
 
@@ -172,12 +165,17 @@ impl Tabs {
                     active_clone.set(tab_id.clone());
                 }) as Box<dyn FnMut(MouseEvent)>);
 
-                tab_el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                tab_el
+                    .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                     .unwrap();
                 closure.forget();
 
                 if let Some(change_closure) = on_change_clone {
-                    tab_el.add_event_listener_with_callback("click", change_closure.as_ref().unchecked_ref())
+                    tab_el
+                        .add_event_listener_with_callback(
+                            "click",
+                            change_closure.as_ref().unchecked_ref(),
+                        )
                         .unwrap();
                     change_closure.forget();
                 }

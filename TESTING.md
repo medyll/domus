@@ -16,15 +16,17 @@ Domius has three types of tests:
 
 ```bash
 # Run all native tests
-cargo test --workspace --exclude hello-world
+cargo test --workspace
 
 # Run tests for a specific crate
 cargo test -p domius-core
 cargo test -p domius-macro
 cargo test -p domius-cli
+cargo test -p domius-desktop
+cargo test -p domius-web
 
 # Run tests with output
-cargo test --workspace --exclude hello-world -- --nocapture
+cargo test --workspace -- --nocapture
 
 # Run specific test
 cargo test -p domius-core signal_get_set_works
@@ -40,14 +42,10 @@ curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 Then run WASM tests:
 ```bash
 # Run all WASM tests in headless Firefox
-wasm-pack test --headless --firefox domius-core
 wasm-pack test --headless --firefox domius-web
 
 # Run in Chrome
 wasm-pack test --headless --chrome domius-web
-
-# Run specific test file
-wasm-pack test --headless --firefox domius-web -- button_tests
 
 # Run tests in browser (for debugging)
 wasm-pack test --firefox domius-web
@@ -57,10 +55,11 @@ wasm-pack test --firefox domius-web
 
 | Crate | Native Tests | WASM Tests | Description |
 |-------|-------------|------------|-------------|
-| `domius-core` | ✅ 19 tests | ✅ | Signal, Effect, Scope, Batch, Diamond, Re-entrancy |
+| `domius-core` | ✅ 19 tests | — | Signal, Effect, Scope, Batch, Diamond, Re-entrancy |
 | `domius-macro` | ✅ 38 tests | ❌ | RSX parser, codegen |
 | `domius-cli` | ✅ 35 tests | ❌ | CSS scoper, scaffold |
-| `domius-web` | ✅ 15 tests | ✅ 25 tests | Components, hooks, context, router |
+| `domius-desktop` | ✅ 10 tests | — | Components, events, context |
+| `domius-web` | ✅ 78 tests | ✅ 32 tests | Components, hooks, context, router |
 
 ## Writing Tests
 

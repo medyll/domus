@@ -46,12 +46,14 @@ pub struct ListPatch {
 /// Time: O(N + M)  Space: O(N)
 pub fn diff_keys(old_keys: &[String], new_keys: &[String]) -> ListPatch {
     // Build reverse index: key → old position
-    let old_map: HashMap<&str, usize> =
-        old_keys.iter().enumerate().map(|(i, k)| (k.as_str(), i)).collect();
+    let old_map: HashMap<&str, usize> = old_keys
+        .iter()
+        .enumerate()
+        .map(|(i, k)| (k.as_str(), i))
+        .collect();
 
     // Build a set of new keys for O(1) "is key still present?" checks
-    let new_set: std::collections::HashSet<&str> =
-        new_keys.iter().map(String::as_str).collect();
+    let new_set: std::collections::HashSet<&str> = new_keys.iter().map(String::as_str).collect();
 
     // Removes: old items whose key no longer appears in the new list
     let removes: Vec<usize> = old_keys
@@ -101,7 +103,10 @@ mod tests {
     fn test_insert_into_empty() {
         let patch = diff_keys(&[], &keys(&["a", "b", "c"]));
         assert!(patch.removes.is_empty());
-        assert_eq!(patch.ops, vec![DiffOp::Insert, DiffOp::Insert, DiffOp::Insert]);
+        assert_eq!(
+            patch.ops,
+            vec![DiffOp::Insert, DiffOp::Insert, DiffOp::Insert]
+        );
     }
 
     #[test]
@@ -117,34 +122,35 @@ mod tests {
     fn test_add_item_to_end() {
         let patch = diff_keys(&keys(&["a", "b"]), &keys(&["a", "b", "c"]));
         assert!(patch.removes.is_empty());
-        assert_eq!(patch.ops, vec![
-            DiffOp::Keep(0),
-            DiffOp::Keep(1),
-            DiffOp::Insert,
-        ]);
+        assert_eq!(
+            patch.ops,
+            vec![DiffOp::Keep(0), DiffOp::Keep(1), DiffOp::Insert,]
+        );
     }
 
     #[test]
     fn test_add_item_to_start() {
         let patch = diff_keys(&keys(&["b", "c"]), &keys(&["a", "b", "c"]));
         assert!(patch.removes.is_empty());
-        assert_eq!(patch.ops, vec![
-            DiffOp::Insert,
-            DiffOp::Keep(0),
-            DiffOp::Keep(1),
-        ]);
+        assert_eq!(
+            patch.ops,
+            vec![DiffOp::Insert, DiffOp::Keep(0), DiffOp::Keep(1),]
+        );
     }
 
     #[test]
     fn test_add_multiple_items() {
         let patch = diff_keys(&keys(&["b"]), &keys(&["a", "b", "c", "d"]));
         assert!(patch.removes.is_empty());
-        assert_eq!(patch.ops, vec![
-            DiffOp::Insert,
-            DiffOp::Keep(0),
-            DiffOp::Insert,
-            DiffOp::Insert,
-        ]);
+        assert_eq!(
+            patch.ops,
+            vec![
+                DiffOp::Insert,
+                DiffOp::Keep(0),
+                DiffOp::Insert,
+                DiffOp::Insert,
+            ]
+        );
     }
 
     // --- Remove items ---
@@ -179,22 +185,20 @@ mod tests {
     fn test_reverse_list() {
         let patch = diff_keys(&keys(&["a", "b", "c"]), &keys(&["c", "b", "a"]));
         assert!(patch.removes.is_empty());
-        assert_eq!(patch.ops, vec![
-            DiffOp::Keep(2),
-            DiffOp::Keep(1),
-            DiffOp::Keep(0),
-        ]);
+        assert_eq!(
+            patch.ops,
+            vec![DiffOp::Keep(2), DiffOp::Keep(1), DiffOp::Keep(0),]
+        );
     }
 
     #[test]
     fn test_move_first_to_last() {
         let patch = diff_keys(&keys(&["a", "b", "c"]), &keys(&["b", "c", "a"]));
         assert!(patch.removes.is_empty());
-        assert_eq!(patch.ops, vec![
-            DiffOp::Keep(1),
-            DiffOp::Keep(2),
-            DiffOp::Keep(0),
-        ]);
+        assert_eq!(
+            patch.ops,
+            vec![DiffOp::Keep(1), DiffOp::Keep(2), DiffOp::Keep(0),]
+        );
     }
 
     #[test]
@@ -211,22 +215,24 @@ mod tests {
         // old: A B C  →  new: B A D
         let patch = diff_keys(&keys(&["a", "b", "c"]), &keys(&["b", "a", "d"]));
         assert_eq!(patch.removes, vec![2]); // c removed
-        assert_eq!(patch.ops, vec![
-            DiffOp::Keep(1), // b reused
-            DiffOp::Keep(0), // a reused
-            DiffOp::Insert,  // d is new
-        ]);
+        assert_eq!(
+            patch.ops,
+            vec![
+                DiffOp::Keep(1), // b reused
+                DiffOp::Keep(0), // a reused
+                DiffOp::Insert,  // d is new
+            ]
+        );
     }
 
     #[test]
     fn test_no_change() {
         let patch = diff_keys(&keys(&["x", "y", "z"]), &keys(&["x", "y", "z"]));
         assert!(patch.removes.is_empty());
-        assert_eq!(patch.ops, vec![
-            DiffOp::Keep(0),
-            DiffOp::Keep(1),
-            DiffOp::Keep(2),
-        ]);
+        assert_eq!(
+            patch.ops,
+            vec![DiffOp::Keep(0), DiffOp::Keep(1), DiffOp::Keep(2),]
+        );
     }
 
     // --- Complex / large keys ---

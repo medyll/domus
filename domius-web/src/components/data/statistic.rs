@@ -56,9 +56,9 @@ pub struct StatisticProps {
 /// ```
 pub fn statistic(props: StatisticProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("statistic");
     if let Some(class) = &props.class {
         classes.push_str(" ");
@@ -107,26 +107,26 @@ pub fn statistic(props: StatisticProps) -> Element {
         if trend != TrendType::None {
             let trend_el: Element = document.create_element("div").unwrap();
             trend_el.set_class_name("statistic-trend");
-            
+
             if props.trend_positive {
                 trend_el.set_attribute("data-trend", "positive").ok();
             } else {
                 trend_el.set_attribute("data-trend", "negative").ok();
             }
-            
+
             // Trend icon
             let icon = match trend {
                 TrendType::Increase => "&#8593;", // ↑
                 TrendType::Decrease => "&#8595;", // ↓
                 _ => "",
             };
-            
+
             if !icon.is_empty() {
                 let icon_el: Element = document.create_element("span").unwrap();
                 icon_el.set_inner_html(icon);
                 trend_el.append_child(&icon_el).unwrap();
             }
-            
+
             // Trend value
             if let Some(trend_value) = &props.trend_value {
                 let value_el: Element = document.create_element("span").unwrap();
@@ -134,7 +134,7 @@ pub fn statistic(props: StatisticProps) -> Element {
                 value_el.set_text_content(Some(trend_value));
                 trend_el.append_child(&value_el).unwrap();
             }
-            
+
             container.append_child(&trend_el).unwrap();
         }
     }
@@ -164,9 +164,9 @@ pub struct StatisticCardProps {
 /// Build a StatisticCard component.
 pub fn statistic_card(props: StatisticCardProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("statistic-card");
     if props.bordered {
         classes.push_str(" statistic-card-bordered");

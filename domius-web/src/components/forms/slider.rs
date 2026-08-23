@@ -62,11 +62,7 @@ impl Slider {
             .document()
             .expect("no document");
 
-        let container: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let container: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
 
         // Build class names
         let mut classes = vec!["domius-slider".to_string()];
@@ -77,7 +73,9 @@ impl Slider {
         if let Some(class) = &props.class {
             classes.push(class.clone());
         }
-        container.set_attribute("class", &classes.join(" ")).unwrap();
+        container
+            .set_attribute("class", &classes.join(" "))
+            .unwrap();
 
         // Create range input
         let input: HtmlElement = document
@@ -89,8 +87,10 @@ impl Slider {
         input.set_attribute("class", "domius-slider-input").unwrap();
         input.set_attribute("min", &props.min.to_string()).unwrap();
         input.set_attribute("max", &props.max.to_string()).unwrap();
-        input.set_attribute("step", &props.step.to_string()).unwrap();
-        
+        input
+            .set_attribute("step", &props.step.to_string())
+            .unwrap();
+
         if props.disabled {
             input.set_attribute("disabled", "true").unwrap();
         }
@@ -103,12 +103,11 @@ impl Slider {
 
         // Add value display if requested
         if props.show_value {
-            let value_display: HtmlElement = document
-                .create_element("span")
-                .unwrap()
-                .dyn_into()
+            let value_display: HtmlElement =
+                document.create_element("span").unwrap().dyn_into().unwrap();
+            value_display
+                .set_attribute("class", "domius-slider-value")
                 .unwrap();
-            value_display.set_attribute("class", "domius-slider-value").unwrap();
             value_display.set_text_content(Some(&value_str));
             container.append_child(&value_display).unwrap();
         }
@@ -120,7 +119,8 @@ impl Slider {
             Closure::wrap(Box::new(move |event: InputEvent| {
                 let target = event.target().unwrap();
                 let input_el: HtmlElement = target.dyn_into().unwrap();
-                let val: f64 = input_el.get_attribute("value")
+                let val: f64 = input_el
+                    .get_attribute("value")
                     .unwrap_or_else(|| "0".to_string())
                     .parse()
                     .unwrap_or(0.0);
@@ -131,19 +131,22 @@ impl Slider {
         let closure = Closure::wrap(Box::new(move |event: InputEvent| {
             let target = event.target().unwrap();
             let input_el: HtmlElement = target.dyn_into().unwrap();
-            let val: f64 = input_el.get_attribute("value")
+            let val: f64 = input_el
+                .get_attribute("value")
                 .unwrap_or_else(|| "0".to_string())
                 .parse()
                 .unwrap_or(0.0);
             value_clone.set(val);
         }) as Box<dyn FnMut(InputEvent)>);
 
-        input.add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())
+        input
+            .add_event_listener_with_callback("input", closure.as_ref().unchecked_ref())
             .unwrap();
         closure.forget();
 
         if let Some(change_closure) = on_change_clone {
-            input.add_event_listener_with_callback("input", change_closure.as_ref().unchecked_ref())
+            input
+                .add_event_listener_with_callback("input", change_closure.as_ref().unchecked_ref())
                 .unwrap();
             change_closure.forget();
         }

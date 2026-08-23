@@ -20,10 +20,6 @@ fn el(tag: &str) -> Element {
     document().create_element(tag).unwrap()
 }
 
-fn text_node(text: &str) -> web_sys::Text {
-    document().create_text_node(text)
-}
-
 // ---------------------------------------------------------------------------
 // Counter section
 // ---------------------------------------------------------------------------

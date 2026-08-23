@@ -32,20 +32,24 @@ mod wasm {
     ///
     /// Safe to call multiple times (each call installs one observer).
     pub fn init_disposal_observer() {
-        let callback = Closure::wrap(Box::new(move |mutations: js_sys::Array, _observer: MutationObserver| {
-            for item in mutations.iter() {
-                let record: MutationRecord = item.unchecked_into();
-                let removed: NodeList = record.removed_nodes();
-                for i in 0..removed.length() {
-                    if let Some(node) = removed.get(i) {
-                        if let Some(element) = node.dyn_ref::<web_sys::Element>() {
-                            try_dispose_element(element);
-                            // Also check descendants with data-domius-scope
-                            if let Ok(scoped) = element.query_selector_all("[data-domius-scope]") {
-                                for j in 0..scoped.length() {
-                                    if let Some(child) = scoped.get(j) {
-                                        if let Some(el) = child.dyn_ref::<web_sys::Element>() {
-                                            try_dispose_element(el);
+        let callback = Closure::wrap(Box::new(
+            move |mutations: js_sys::Array, _observer: MutationObserver| {
+                for item in mutations.iter() {
+                    let record: MutationRecord = item.unchecked_into();
+                    let removed: NodeList = record.removed_nodes();
+                    for i in 0..removed.length() {
+                        if let Some(node) = removed.get(i) {
+                            if let Some(element) = node.dyn_ref::<web_sys::Element>() {
+                                try_dispose_element(element);
+                                // Also check descendants with data-domius-scope
+                                if let Ok(scoped) =
+                                    element.query_selector_all("[data-domius-scope]")
+                                {
+                                    for j in 0..scoped.length() {
+                                        if let Some(child) = scoped.get(j) {
+                                            if let Some(el) = child.dyn_ref::<web_sys::Element>() {
+                                                try_dispose_element(el);
+                                            }
                                         }
                                     }
                                 }
@@ -53,8 +57,8 @@ mod wasm {
                         }
                     }
                 }
-            }
-        }) as Box<dyn Fn(js_sys::Array, MutationObserver)>);
+            },
+        ) as Box<dyn Fn(js_sys::Array, MutationObserver)>);
 
         let observer = MutationObserver::new(callback.as_ref().unchecked_ref())
             .expect("MutationObserver::new failed");

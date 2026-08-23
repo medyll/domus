@@ -783,7 +783,7 @@ The CLI auto-converts names:
 Run all tests:
 
 ```bash
-cargo test --workspace --exclude hello-world
+cargo test --workspace
 ```
 
 Test breakdown:
@@ -791,13 +791,18 @@ Test breakdown:
 ```
 domius-cli   35 tests   CSS scoper · scaffolding · naming
 domius-core  19 tests   signals · effects · batching · diamonds
+domius-desktop 10 tests components · events · context
 domius-macro 38 tests   RSX parsing · codegen
-domius-web   62 tests   components · router · context · lists
+domius-web   78 tests   components · router · context · lists
 ────────────────────────────────────────────────
-            154 tests  all passing
+            180 native tests + 1 doctest passing
 ```
 
-Tests run natively (no WASM runtime needed). WASM-specific code is stubbed out for testing.
+Run the 32 browser integration tests with:
+
+```bash
+wasm-pack test --headless --chrome domius-web
+```
 
 ---
 

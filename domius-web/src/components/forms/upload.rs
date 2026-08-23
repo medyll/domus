@@ -39,9 +39,9 @@ pub struct UploadProps {
 /// ```
 pub fn upload(props: UploadProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("upload");
     if props.drag {
         classes.push_str(" upload-drag");
@@ -56,31 +56,31 @@ pub fn upload(props: UploadProps) -> Element {
     let input: Element = document.create_element("input").unwrap();
     input.set_attribute("type", "file").ok();
     input.set_class_name("upload-input");
-    
+
     if props.multiple {
         input.set_attribute("multiple", "").ok();
     }
     if let Some(accept) = &props.accept {
         input.set_attribute("accept", accept).ok();
     }
-    
+
     container.append_child(&input).unwrap();
 
     // Drag area
     if props.drag {
         let drag_area: Element = document.create_element("div").unwrap();
         drag_area.set_class_name("upload-drag-area");
-        
+
         let icon: Element = document.create_element("div").unwrap();
         icon.set_class_name("upload-icon");
         icon.set_inner_html("&#8593;"); // ↑ symbol
         drag_area.append_child(&icon).unwrap();
-        
+
         let text: Element = document.create_element("p").unwrap();
         text.set_class_name("upload-text");
         text.set_text_content(Some("Click or drag file to this area to upload"));
         drag_area.append_child(&text).unwrap();
-        
+
         container.append_child(&drag_area).unwrap();
     }
 

@@ -35,8 +35,8 @@
 //! let (element, current_index) = Carousel::create(props);
 //! ```
 
-use domius_core::signal::{signal, Signal};
 use domius_core::effect::create_effect;
+use domius_core::signal::{signal, Signal};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement, HtmlImageElement, MouseEvent};
@@ -131,24 +131,28 @@ impl Carousel {
         }
 
         // Calculate total slides (add one for loop if infinite)
-        let total_slides = if props.infinite { item_count + 1 } else { item_count };
-        
+        let total_slides = if props.infinite {
+            item_count + 1
+        } else {
+            item_count
+        };
+
         // Calculate figure width as percentage (100% * total_slides)
         let figure_width = total_slides * 100;
-        
+
         // Calculate individual slide width
         let slide_width = 100.0 / item_count as f64;
 
         // Create main container
-        let slider: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let slider: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
         slider.set_attribute("class", "domius-carousel").unwrap();
         slider.set_attribute("role", "region").unwrap();
-        slider.set_attribute("aria-label", "Image carousel").unwrap();
-        slider.set_attribute("aria-roledescription", "carousel").unwrap();
+        slider
+            .set_attribute("aria-label", "Image carousel")
+            .unwrap();
+        slider
+            .set_attribute("aria-roledescription", "carousel")
+            .unwrap();
 
         if let Some(class) = &props.class {
             slider.class_list().add_1(class).ok();
@@ -160,18 +164,19 @@ impl Carousel {
             .unwrap()
             .dyn_into()
             .unwrap();
-        figure.set_attribute("class", "domius-carousel-figure").unwrap();
-        
+        figure
+            .set_attribute("class", "domius-carousel-figure")
+            .unwrap();
+
         // Set figure width
-        figure.set_attribute(
-            "style",
-            &format!("width: {}%;", figure_width)
-        ).unwrap();
+        figure
+            .set_attribute("style", &format!("width: {}%;", figure_width))
+            .unwrap();
 
         // Build animation CSS
         let animation_name = format!("slidy-{}", item_count);
         let keyframes = Self::generate_keyframes(item_count, props.interval, props.infinite);
-        
+
         // Inject keyframes style
         if let Some(head) = document.query_selector("head").ok().flatten() {
             let style = document.create_element("style").unwrap();
@@ -182,29 +187,25 @@ impl Carousel {
         // Apply animation to figure
         let animation_duration = props.animation_duration;
         let existing_style = figure.get_attribute("style").unwrap_or_default();
-        figure.set_attribute(
-            "style",
-            &format!(
-                "{} animation: {}s {} infinite; animation-play-state: running;",
-                existing_style, animation_duration, animation_name
+        figure
+            .set_attribute(
+                "style",
+                &format!(
+                    "{} animation: {}s {} infinite; animation-play-state: running;",
+                    existing_style, animation_duration, animation_name
+                ),
             )
-        ).unwrap();
+            .unwrap();
 
         // Add items to figure
         for (i, item) in props.items.iter().enumerate() {
-            let img: HtmlImageElement = document
-                .create_element("img")
-                .unwrap()
-                .dyn_into()
-                .unwrap();
-            
+            let img: HtmlImageElement = document.create_element("img").unwrap().dyn_into().unwrap();
+
             img.set_class_name("domius-carousel-item");
-            
+
             // Set image width as percentage
-            img.set_attribute(
-                "style",
-                &format!("width: {}%; float: left;", slide_width)
-            ).unwrap();
+            img.set_attribute("style", &format!("width: {}%; float: left;", slide_width))
+                .unwrap();
 
             if let Some(src) = &item.src {
                 img.set_src(src);
@@ -215,23 +216,19 @@ impl Carousel {
                 img.set_alt("Carousel image");
             }
 
-            figure.append_child(img.dyn_ref::<Element>().unwrap()).unwrap();
+            figure
+                .append_child(img.dyn_ref::<Element>().unwrap())
+                .unwrap();
         }
 
         // Add first image again for infinite loop
         if props.infinite && !props.items.is_empty() {
             let first_item = &props.items[0];
-            let img: HtmlImageElement = document
-                .create_element("img")
-                .unwrap()
-                .dyn_into()
-                .unwrap();
-            
+            let img: HtmlImageElement = document.create_element("img").unwrap().dyn_into().unwrap();
+
             img.set_class_name("domius-carousel-item");
-            img.set_attribute(
-                "style",
-                &format!("width: {}%; float: left;", slide_width)
-            ).unwrap();
+            img.set_attribute("style", &format!("width: {}%; float: left;", slide_width))
+                .unwrap();
 
             if let Some(src) = &first_item.src {
                 img.set_src(src);
@@ -240,7 +237,9 @@ impl Carousel {
                 img.set_alt(alt);
             }
 
-            figure.append_child(img.dyn_ref::<Element>().unwrap()).unwrap();
+            figure
+                .append_child(img.dyn_ref::<Element>().unwrap())
+                .unwrap();
         }
 
         slider.append_child(&figure).unwrap();
@@ -250,12 +249,25 @@ impl Carousel {
 
         // Add navigation arrows if requested
         if props.show_arrows && item_count > 1 {
-            Self::add_arrows(&slider, &figure, &current_index, item_count, props.interval, props.animation_duration, props.on_change.as_ref());
+            Self::add_arrows(
+                &slider,
+                &figure,
+                &current_index,
+                item_count,
+                props.interval,
+                props.animation_duration,
+                props.on_change.as_ref(),
+            );
         }
 
         // Add dot indicators if requested
         if props.show_dots && item_count > 1 {
-            Self::add_dots(&slider, &current_index, item_count, props.on_change.as_ref());
+            Self::add_dots(
+                &slider,
+                &current_index,
+                item_count,
+                props.on_change.as_ref(),
+            );
         }
 
         // Add pause on hover if requested
@@ -265,30 +277,54 @@ impl Carousel {
 
             // Pause on mouseenter
             let pause_closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
-                let current_style = figure_clone_pause.get_attribute("style").unwrap_or_default();
+                let current_style = figure_clone_pause
+                    .get_attribute("style")
+                    .unwrap_or_default();
                 if !current_style.contains("animation-play-state: paused") {
-                    figure_clone_pause.set_attribute(
-                        "style",
-                        &format!("{} animation-play-state: paused;", current_style.replace("animation-play-state: running;", ""))
-                    ).ok();
+                    figure_clone_pause
+                        .set_attribute(
+                            "style",
+                            &format!(
+                                "{} animation-play-state: paused;",
+                                current_style.replace("animation-play-state: running;", "")
+                            ),
+                        )
+                        .ok();
                 }
             }) as Box<dyn FnMut(MouseEvent)>);
 
-            slider.add_event_listener_with_callback("mouseenter", pause_closure.as_ref().unchecked_ref()).ok();
+            slider
+                .add_event_listener_with_callback(
+                    "mouseenter",
+                    pause_closure.as_ref().unchecked_ref(),
+                )
+                .ok();
             pause_closure.forget();
 
             // Resume on mouseleave
             let resume_closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
-                let current_style = figure_clone_resume.get_attribute("style").unwrap_or_default();
+                let current_style = figure_clone_resume
+                    .get_attribute("style")
+                    .unwrap_or_default();
                 if current_style.contains("animation-play-state: paused") {
-                    figure_clone_resume.set_attribute(
-                        "style",
-                        &current_style.replace("animation-play-state: paused;", "animation-play-state: running;")
-                    ).ok();
+                    figure_clone_resume
+                        .set_attribute(
+                            "style",
+                            &current_style.replace(
+                                "animation-play-state: paused;",
+                                "animation-play-state: running;",
+                            ),
+                        )
+                        .ok();
                 }
             }) as Box<dyn FnMut(MouseEvent)>);
 
-            slider.add_event_listener_with_callback("mouseleave", resume_closure.as_ref().unchecked_ref()).ok();
+            slider
+                .add_event_listener_with_callback(
+                    "mouseleave",
+                    resume_closure.as_ref().unchecked_ref(),
+                )
+                .ok();
             resume_closure.forget();
         }
 
@@ -297,7 +333,7 @@ impl Carousel {
             let index_clone = current_index.clone();
             let on_change_clone = props.on_change;
             let item_count_clone = item_count;
-            
+
             create_effect(move || {
                 let idx = index_clone.get();
                 if let Some(handler) = &on_change_clone {
@@ -314,21 +350,21 @@ impl Carousel {
         let total_slides = if infinite { item_count + 1 } else { item_count };
         let slide_duration = 100.0 / total_slides as f64;
         let transition_percent = 5.0; // 5% of time for transition
-        
+
         let mut keyframes = String::from("@keyframes slidy {");
-        
+
         for i in 0..total_slides {
             let start_percent = i as f64 * slide_duration;
             let end_percent = start_percent + slide_duration - transition_percent;
             let next_start = start_percent + slide_duration;
-            
+
             let _left_percent = if infinite && i == item_count {
                 // Last slide (duplicate of first) - jump to start
                 0.0
             } else {
                 -(i as f64) * slide_duration
             };
-            
+
             // Hold position
             if i == 0 {
                 keyframes.push_str(&format!("0% {{ left: 0%; }}"));
@@ -336,9 +372,13 @@ impl Carousel {
             keyframes.push_str(&format!(
                 "{:.1}% {{ left: {:.1}%; }}",
                 end_percent,
-                if infinite && i == item_count { 0.0 } else { -(i as f64) * (100.0 / item_count as f64) }
+                if infinite && i == item_count {
+                    0.0
+                } else {
+                    -(i as f64) * (100.0 / item_count as f64)
+                }
             ));
-            
+
             // Transition to next
             if i < total_slides - 1 {
                 let next_left = if infinite && i == item_count - 1 {
@@ -346,15 +386,14 @@ impl Carousel {
                 } else {
                     -((i + 1) as f64) * (100.0 / item_count as f64)
                 };
-                
+
                 keyframes.push_str(&format!(
                     "{:.1}% {{ left: {:.1}%; }}",
-                    next_start,
-                    next_left
+                    next_start, next_left
                 ));
             }
         }
-        
+
         keyframes.push_str("}");
         keyframes
     }
@@ -372,15 +411,31 @@ impl Carousel {
         let document = slider.owner_document().unwrap();
 
         // Previous arrow
-        let prev_arrow: HtmlElement = document.create_element("button").unwrap().dyn_into().unwrap();
-        prev_arrow.set_attribute("class", "domius-carousel-arrow domius-carousel-prev").unwrap();
-        prev_arrow.set_attribute("aria-label", "Previous slide").unwrap();
+        let prev_arrow: HtmlElement = document
+            .create_element("button")
+            .unwrap()
+            .dyn_into()
+            .unwrap();
+        prev_arrow
+            .set_attribute("class", "domius-carousel-arrow domius-carousel-prev")
+            .unwrap();
+        prev_arrow
+            .set_attribute("aria-label", "Previous slide")
+            .unwrap();
         prev_arrow.set_text_content(Some("‹"));
 
         // Next arrow
-        let next_arrow: HtmlElement = document.create_element("button").unwrap().dyn_into().unwrap();
-        next_arrow.set_attribute("class", "domius-carousel-arrow domius-carousel-next").unwrap();
-        next_arrow.set_attribute("aria-label", "Next slide").unwrap();
+        let next_arrow: HtmlElement = document
+            .create_element("button")
+            .unwrap()
+            .dyn_into()
+            .unwrap();
+        next_arrow
+            .set_attribute("class", "domius-carousel-arrow domius-carousel-next")
+            .unwrap();
+        next_arrow
+            .set_attribute("aria-label", "Next slide")
+            .unwrap();
         next_arrow.set_text_content(Some("›"));
 
         slider.append_child(&prev_arrow).unwrap();
@@ -399,19 +454,27 @@ impl Carousel {
     ) {
         let document = slider.owner_document().unwrap();
 
-        let dots_container: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
-        dots_container.set_attribute("class", "domius-carousel-dots").unwrap();
+        let dots_container: HtmlElement =
+            document.create_element("div").unwrap().dyn_into().unwrap();
+        dots_container
+            .set_attribute("class", "domius-carousel-dots")
+            .unwrap();
         dots_container.set_attribute("role", "tablist").unwrap();
 
         for i in 0..item_count {
-            let dot: HtmlElement = document.create_element("button").unwrap().dyn_into().unwrap();
+            let dot: HtmlElement = document
+                .create_element("button")
+                .unwrap()
+                .dyn_into()
+                .unwrap();
             dot.set_attribute("class", "domius-carousel-dot").unwrap();
             dot.set_attribute("role", "tab").unwrap();
             dot.set_attribute("aria-label", &format!("Go to slide {}", i + 1));
-            
+
             if i == 0 {
                 dot.set_attribute("aria-selected", "true").unwrap();
-                dot.set_attribute("class", "domius-carousel-dot active").unwrap();
+                dot.set_attribute("class", "domius-carousel-dot active")
+                    .unwrap();
             }
 
             dots_container.append_child(&dot).unwrap();

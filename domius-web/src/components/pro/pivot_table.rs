@@ -1,7 +1,7 @@
 //! PivotTable component - Data aggregation and summarization.
 
-use web_sys::Element;
 use std::collections::HashMap;
+use web_sys::Element;
 
 /// Aggregation function.
 #[derive(Clone)]

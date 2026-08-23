@@ -52,8 +52,10 @@ impl Result {
 
         // Icon
         let icon_container = document.create_element("div").unwrap();
-        icon_container.set_attribute("class", "domius-result-icon").unwrap();
-        
+        icon_container
+            .set_attribute("class", "domius-result-icon")
+            .unwrap();
+
         let icon_char = match props.status {
             ResultStatus::Success => "✓",
             ResultStatus::Error => "✕",
@@ -73,7 +75,9 @@ impl Result {
         // Description
         if let Some(desc) = &props.description {
             let desc_el = document.create_element("p").unwrap();
-            desc_el.set_attribute("class", "domius-result-description").unwrap();
+            desc_el
+                .set_attribute("class", "domius-result-description")
+                .unwrap();
             desc_el.set_text_content(Some(desc));
             container.append_child(&desc_el).unwrap();
         }
@@ -81,7 +85,9 @@ impl Result {
         // Extra actions
         if let Some(actions) = &props.extra_actions {
             let actions_el = document.create_element("div").unwrap();
-            actions_el.set_attribute("class", "domius-result-actions").unwrap();
+            actions_el
+                .set_attribute("class", "domius-result-actions")
+                .unwrap();
             actions_el.set_inner_html(actions);
             container.append_child(&actions_el).unwrap();
         }

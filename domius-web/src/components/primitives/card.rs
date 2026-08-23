@@ -37,10 +37,10 @@ pub struct CardProps {
 /// ```
 pub fn card(props: CardProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     // Main container
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("card");
     if props.bordered {
         classes.push_str(" card-bordered");
@@ -53,7 +53,7 @@ pub fn card(props: CardProps) -> Element {
         classes.push_str(class);
     }
     container.set_class_name(&classes);
-    
+
     if let Some(style) = &props.style {
         container.set_attribute("style", style).ok();
     }

@@ -2,6 +2,9 @@
 //!
 //! These helpers simplify writing tests that interact with the DOM.
 
+#![cfg(target_arch = "wasm32")]
+#![allow(dead_code)]
+
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, Window};
 
@@ -51,21 +54,25 @@ pub fn remove_element(element: &Element) {
 pub fn create_test_container(id: &str) -> HtmlElement {
     let container = create_div();
     container.set_id(id);
-    
+
     // Append to body
     let body = document()
         .query_selector("body")
         .ok()
         .flatten()
         .unwrap_or_else(|| {
-            document().create_element("body").unwrap().dyn_into().unwrap()
+            document()
+                .create_element("body")
+                .unwrap()
+                .dyn_into()
+                .unwrap()
         });
-    
+
     body.dyn_ref::<Element>()
         .unwrap()
         .append_child(container.dyn_ref::<Element>().unwrap())
         .expect("failed to append test container");
-    
+
     container
 }
 
@@ -86,7 +93,7 @@ impl TestContainerGuard {
         let _ = create_test_container(id);
         Self { id: id.to_string() }
     }
-    
+
     pub fn element(&self) -> Option<Element> {
         get_element_by_id(&self.id)
     }
@@ -104,28 +111,35 @@ pub async fn wait_for<F>(condition: F, timeout_ms: u64) -> bool
 where
     F: Fn() -> bool,
 {
-    let start = web_sys::window().unwrap().now() as u64;
-    
-    while condition() == false {
-        if (web_sys::window().unwrap().now() as u64) - start > timeout_ms {
+    let performance = window()
+        .performance()
+        .expect("performance API is unavailable");
+    let start = performance.now();
+
+    while !condition() {
+        if performance.now() - start > timeout_ms as f64 {
             return false;
         }
-        // Yield to event loop
-        wasm_bindgen_futures::yield_now().await;
+        // Let pending promise callbacks run before checking again.
+        wasm_bindgen_futures::JsFuture::from(js_sys::Promise::resolve(
+            &wasm_bindgen::JsValue::UNDEFINED,
+        ))
+        .await
+        .expect("microtask should resolve");
     }
-    
+
     true
 }
 
 /// Simulate a click event on an element.
 pub fn simulate_click(element: &Element) {
-    let event = web_sys::MouseEvent::new_with_event_init_dict(
-        "click",
-        web_sys::MouseEventInit::new()
-            .bubbles(true)
-            .cancelable(true),
-    ).expect("failed to create click event");
-    
+    let event_init = web_sys::MouseEventInit::new();
+    event_init.set_bubbles(true);
+    event_init.set_cancelable(true);
+
+    let event = web_sys::MouseEvent::new_with_mouse_event_init_dict("click", &event_init)
+        .expect("failed to create click event");
+
     element.dispatch_event(&event).ok();
 }
 
@@ -135,12 +149,10 @@ pub fn simulate_key_press(element: &Element, key: &str) {
     event_init.set_key(key);
     event_init.set_bubbles(true);
     event_init.set_cancelable(true);
-    
-    let event = web_sys::KeyboardEvent::new_with_event_init_dict(
-        "keydown",
-        &event_init,
-    ).expect("failed to create keyboard event");
-    
+
+    let event = web_sys::KeyboardEvent::new_with_keyboard_event_init_dict("keydown", &event_init)
+        .expect("failed to create keyboard event");
+
     element.dispatch_event(&event).ok();
 }
 

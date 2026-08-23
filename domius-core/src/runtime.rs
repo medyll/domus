@@ -26,9 +26,8 @@ pub(crate) fn schedule_effect(effect: Rc<Effect>) {
     let effect_ptr = effect.as_ref() as *const Effect;
 
     // Check if already executed in this generation (prevent re-entrancy loops)
-    let already_executed = EXECUTED_THIS_GENERATION.with(|executed| {
-        executed.borrow().contains(&effect_ptr)
-    });
+    let already_executed =
+        EXECUTED_THIS_GENERATION.with(|executed| executed.borrow().contains(&effect_ptr));
     if already_executed {
         return; // Ignore re-scheduling of the same effect in the same generation
     }
@@ -363,5 +362,4 @@ mod tests {
         a.set(3);
         assert_eq!(*values_seen.borrow(), vec![3, 6, 9]);
     }
-
 }

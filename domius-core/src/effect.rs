@@ -89,7 +89,7 @@ pub(crate) fn schedule_effect(effect: Rc<Effect>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::signal::{signal, Signal};
+    use crate::signal::signal;
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -125,11 +125,7 @@ mod tests {
 
         create_effect(move || {
             let f = flag_clone.get();
-            let val = if f {
-                a_clone.get()
-            } else {
-                b_clone.get()
-            };
+            let val = if f { a_clone.get() } else { b_clone.get() };
             values_clone.borrow_mut().push(val);
         });
 

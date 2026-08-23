@@ -65,9 +65,9 @@ pub struct SpaceProps {
 /// ```
 pub fn space(props: SpaceProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("space");
     if props.direction == SpaceDirection::Vertical {
         classes.push_str(" space-vertical");
@@ -84,7 +84,7 @@ pub fn space(props: SpaceProps) -> Element {
     // Inline styles for spacing
     let gap = format!("{}px", props.size);
     let mut style = format!("gap: {};", gap);
-    
+
     if let Some(align) = props.align {
         let align_val = match align {
             SpaceAlign::Start => "flex-start",
@@ -94,7 +94,7 @@ pub fn space(props: SpaceProps) -> Element {
         };
         style.push_str(&format!(" align-items: {};", align_val));
     }
-    
+
     if let Some(justify) = props.justify {
         let justify_val = match justify {
             SpaceJustify::Start => "flex-start",
@@ -105,7 +105,7 @@ pub fn space(props: SpaceProps) -> Element {
         };
         style.push_str(&format!(" justify-content: {};", justify_val));
     }
-    
+
     container.set_attribute("style", &style).ok();
 
     container

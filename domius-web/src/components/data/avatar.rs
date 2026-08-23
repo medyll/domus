@@ -69,11 +69,7 @@ impl Avatar {
             .document()
             .expect("no document");
 
-        let avatar: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let avatar: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
 
         // Build class names
         let mut classes = vec![
@@ -88,11 +84,7 @@ impl Avatar {
 
         // Add image if src provided
         if let Some(src) = &props.src {
-            let img: HtmlImageElement = document
-                .create_element("img")
-                .unwrap()
-                .dyn_into()
-                .unwrap();
+            let img: HtmlImageElement = document.create_element("img").unwrap().dyn_into().unwrap();
             img.set_src(src);
             img.set_attribute("class", "domius-avatar-image").unwrap();
             if let Some(alt) = &props.alt {
@@ -108,12 +100,11 @@ impl Avatar {
                 .collect::<String>()
                 .to_uppercase();
 
-            let initials_el: HtmlElement = document
-                .create_element("span")
-                .unwrap()
-                .dyn_into()
+            let initials_el: HtmlElement =
+                document.create_element("span").unwrap().dyn_into().unwrap();
+            initials_el
+                .set_attribute("class", "domius-avatar-initials")
                 .unwrap();
-            initials_el.set_attribute("class", "domius-avatar-initials").unwrap();
             initials_el.set_text_content(Some(&initials));
             avatar.append_child(&initials_el).unwrap();
         }
@@ -155,11 +146,7 @@ impl AvatarGroup {
             .document()
             .expect("no document");
 
-        let group: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let group: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
         group.set_attribute("class", "domius-avatar-group").unwrap();
 
         let visible_count = props.avatars.len().min(props.max_visible);
@@ -174,12 +161,11 @@ impl AvatarGroup {
 
         // Add "+N" indicator for remaining avatars
         if remaining > 0 {
-            let remaining_el: HtmlElement = document
-                .create_element("div")
-                .unwrap()
-                .dyn_into()
+            let remaining_el: HtmlElement =
+                document.create_element("div").unwrap().dyn_into().unwrap();
+            remaining_el
+                .set_attribute("class", "domius-avatar-remaining")
                 .unwrap();
-            remaining_el.set_attribute("class", "domius-avatar-remaining").unwrap();
             remaining_el.set_text_content(Some(&format!("+{}", remaining)));
             group.append_child(&remaining_el).unwrap();
         }

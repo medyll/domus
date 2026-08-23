@@ -50,9 +50,9 @@ pub struct ScrollTextProps {
 /// ```
 pub fn scrolltext(props: ScrollTextProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("scrolltext");
     match props.direction {
         ScrollTextDirection::Up => classes.push_str(" scrolltext-up"),
@@ -67,10 +67,18 @@ pub fn scrolltext(props: ScrollTextProps) -> Element {
     container.set_class_name(&classes);
 
     // Store scroll settings as data attributes
-    container.set_attribute("data-speed", &props.speed.to_string()).ok();
-    container.set_attribute("data-auto-scroll", &props.auto_scroll.to_string()).ok();
-    container.set_attribute("data-pause-on-hover", &props.pause_on_hover.to_string()).ok();
-    container.set_attribute("data-one-by-one", &props.one_by_one.to_string()).ok();
+    container
+        .set_attribute("data-speed", &props.speed.to_string())
+        .ok();
+    container
+        .set_attribute("data-auto-scroll", &props.auto_scroll.to_string())
+        .ok();
+    container
+        .set_attribute("data-pause-on-hover", &props.pause_on_hover.to_string())
+        .ok();
+    container
+        .set_attribute("data-one-by-one", &props.one_by_one.to_string())
+        .ok();
 
     // Viewport (overflow hidden)
     let viewport: Element = document.create_element("div").unwrap();

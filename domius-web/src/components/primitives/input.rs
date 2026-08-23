@@ -3,7 +3,7 @@
 use domius_core::signal::{signal, Signal};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{Element, HtmlInputElement, InputEvent, FocusEvent, KeyboardEvent};
+use web_sys::{Element, FocusEvent, HtmlInputElement, InputEvent, KeyboardEvent};
 
 use crate::component::DomiusNode;
 use crate::hooks::use_focus;
@@ -190,7 +190,9 @@ impl Input {
             .unwrap();
 
         // Set type
-        input.set_attribute("type", props.input_type.as_str()).unwrap();
+        input
+            .set_attribute("type", props.input_type.as_str())
+            .unwrap();
 
         // Set attributes
         if let Some(placeholder) = &props.placeholder {
@@ -249,7 +251,7 @@ impl Input {
         // Build class names
         let mut classes = vec!["domius-input".to_string()];
         classes.push(format!("domius-input-{:?}", props.size).to_lowercase());
-        
+
         if props.error.is_some() {
             classes.push("domius-input-error".to_string());
         }

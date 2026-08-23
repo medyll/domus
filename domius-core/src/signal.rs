@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use crate::effect::Effect;
 use crate::effect::schedule_effect;
+use crate::effect::Effect;
 use crate::effect::RUNNING_EFFECT;
 
 /// Internal non-generic core shared by all signals so we can track them
@@ -15,7 +15,9 @@ pub struct SignalCore {
 impl SignalCore {
     /// Creates a new SignalCore with no subscribers.
     pub fn new() -> Self {
-        Self { subscribers: RefCell::new(Vec::new()) }
+        Self {
+            subscribers: RefCell::new(Vec::new()),
+        }
     }
 
     /// Removes the given effect from this signal's subscriber list.
@@ -48,9 +50,7 @@ pub(crate) fn unsubscribe_effect_from_all(effect: &Rc<Effect>) {
         // Clean dead entries while iterating
         reg.retain(|w| w.upgrade().is_some());
         // Collect live cores
-        reg.iter()
-            .filter_map(|w| w.upgrade())
-            .collect::<Vec<_>>()
+        reg.iter().filter_map(|w| w.upgrade()).collect::<Vec<_>>()
     });
 
     // Step 2: Clean the effect from each signal (outside of registry lock)

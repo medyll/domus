@@ -27,15 +27,13 @@ impl Portal {
             .expect("no window")
             .document()
             .expect("no document");
-        
+
         let target = document
             .query_selector("body")
             .ok()
             .flatten()
-            .unwrap_or_else(|| {
-                document.create_element("body").unwrap()
-            });
-        
+            .unwrap_or_else(|| document.create_element("body").unwrap());
+
         Self {
             target,
             content: None,
@@ -56,7 +54,7 @@ impl Portal {
             .expect("no window")
             .document()
             .expect("no document");
-        
+
         document.get_element_by_id(id).map(|target| Self {
             target,
             content: None,
@@ -67,7 +65,7 @@ impl Portal {
     pub fn mount(&mut self, content: &Node) {
         // Unmount existing content first
         self.unmount();
-        
+
         let cloned = content.clone_node_with_deep(true).ok().unwrap();
         self.target.append_child(&cloned).ok();
         self.content = Some(cloned);
@@ -112,17 +110,20 @@ pub fn get_portal_container(id: &str) -> Element {
         .expect("no window")
         .document()
         .expect("no document");
-    
+
     if let Some(existing) = document.get_element_by_id(id) {
         return existing;
     }
-    
+
     // Create new container
     let container = document.create_element("div").unwrap();
     container.set_id(id);
-    
+
     // Style the container
-    container.set_attribute("style", "
+    container
+        .set_attribute(
+            "style",
+            "
         position: fixed;
         top: 0;
         left: 0;
@@ -130,11 +131,13 @@ pub fn get_portal_container(id: &str) -> Element {
         height: 100%;
         pointer-events: none;
         z-index: 9999;
-    ").ok();
-    
+    ",
+        )
+        .ok();
+
     // Make children interactive
     container.set_attribute("data-portal", "true").ok();
-    
+
     document
         .query_selector("body")
         .ok()
@@ -142,7 +145,7 @@ pub fn get_portal_container(id: &str) -> Element {
         .expect("no body")
         .append_child(&container)
         .expect("failed to append portal container");
-    
+
     container
 }
 

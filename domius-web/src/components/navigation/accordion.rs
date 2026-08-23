@@ -40,7 +40,10 @@ pub struct Accordion;
 
 impl Accordion {
     /// Create an accordion element.
-    pub fn create(_props: AccordionProps, _items: Vec<AccordionItem>) -> (Element, Signal<Vec<usize>>) {
+    pub fn create(
+        _props: AccordionProps,
+        _items: Vec<AccordionItem>,
+    ) -> (Element, Signal<Vec<usize>>) {
         // TODO: Implement accordion
         todo!("Accordion component implementation pending")
     }
