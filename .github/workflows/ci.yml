@@ -34,6 +34,9 @@ jobs:
       
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+      - name: Enforce independent dependency graph
+        run: cargo test -p domius-cli --test dependency_policy
       
       - name: Run clippy
         run: cargo clippy --workspace --all-targets
