@@ -55,13 +55,14 @@ fn gen_node(node: &RsxNode, parent_var: Option<&Ident>) -> TokenStream {
         RsxNode::Text(content) => {
             let text = content.trim_matches('"');
             quote! {
-                web_sys::window()
-                    .expect("no window")
-                    .document()
-                    .expect("no document")
-                    .create_text_node(#text)
-                    .dyn_into::<web_sys::Node>()
-                    .expect("text node as Node")
+                wasm_bindgen::JsCast::dyn_into::<web_sys::Node>(
+                    web_sys::window()
+                        .expect("no window")
+                        .document()
+                        .expect("no document")
+                        .create_text_node(#text)
+                )
+                .expect("text node as Node")
             }
         }
         RsxNode::Dynamic(expr) => {
