@@ -1,4 +1,4 @@
-//! Automatic disposal via Tauri window events.
+//! Automatic disposal via desktop window events.
 //!
 //! Listens to window close events and disposes associated scopes.
 
@@ -10,7 +10,7 @@ use domius_core::{dispose_scope, ScopeId};
 pub fn init_event_listeners() {
     // TODO: Set up global window event listeners
     // For now, this is a placeholder that will be implemented
-    // when integrating with actual Tauri windows
+    // when the Domius window runtime is introduced.
 }
 
 /// Dispose a scope when a window is closed.

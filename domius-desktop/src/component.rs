@@ -1,6 +1,6 @@
-//! Component system for Tauri desktop applications.
+//! Component system for Domius desktop applications.
 //!
-//! Components are rendered as Tauri windows with webview content.
+//! Components provide state and configuration for Domius-managed windows.
 
 use domius_core::{create_scope, dispose_scope, ScopeId};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 /// Trait for desktop components.
 ///
-/// Desktop components are rendered in Tauri windows with webview content.
+/// Desktop components are mounted into windows owned by the Domius runtime.
 pub trait DomiusDesktopComponent {
     /// Props type for this component.
     type Props: Clone + Send + 'static;
@@ -39,7 +39,7 @@ pub trait DomiusDesktopComponent {
     }
 }
 
-/// Marker for component scope in Tauri.
+/// Associates a component scope with a Domius window.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentScope {
     pub scope_id: ScopeId,
@@ -67,16 +67,14 @@ pub fn cleanup_component_scope(scope_id: ScopeId) {
     dispose_scope(scope_id);
 }
 
-/// Helper to create a Tauri window builder with component config.
+/// Return the content URL declared by a desktop component.
 ///
-/// Usage in your Tauri app:
+/// A Domius window host uses this together with [`build_window_config`] when
+/// mounting the component.
 /// ```ignore
 /// let (scope, label, title, (w, h)) = build_window_config::<MyComponent>(props);
-/// let window = WindowBuilder::new(app, label)
-///     .title(title)
-///     .inner_size(w as f64, h as f64)
-///     .build()?;
-/// window.load_url(MyComponent::url())?;
+/// let url = get_component_url::<MyComponent>();
+/// desktop_runtime.open_window(scope, label, title, (w, h), url)?;
 /// ```
 pub fn get_component_url<C: DomiusDesktopComponent>() -> &'static str {
     C::url()

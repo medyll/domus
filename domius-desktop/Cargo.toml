@@ -2,13 +2,12 @@
 name = "domius-desktop"
 version = "0.1.0"
 edition = "2021"
-description = "Tauri desktop backend for Domus UI framework"
+description = "Independent desktop runtime foundation for the Domius UI framework"
 license = "MIT"
 
 [dependencies]
 domius-core = { path = "../domius-core", features = ["serde"] }
 domius-macro = { path = "../domius-macro" }
-tauri = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 

@@ -1,374 +1,154 @@
-# Plan de Refactorisation Multi-Cibles
+# Plan multi-cibles indépendant
 
-**Objectif** : Rendre Domus compatible avec le Web (WASM), Tauri (desktop), et futures plateformes.
+## Contrat produit
 
----
+Domius construit deux couches qui restent séparées :
 
-## 📋 État Actuel
+1. un framework UI Rust à réactivité fine, sans Virtual DOM ;
+2. un runtime d'application web et desktop appartenant à Domius.
 
-### Problèmes Identifiés
+Le projet ne dépend d'aucun framework applicatif concurrent. Un moteur de
+fenêtre, de webview ou de rendu peut exister sous forme d'adaptateur privé ; ses
+types ne traversent jamais l'API publique.
 
-1. **`domius-core` dépend de WASM**
-   - `wasm-bindgen` dans `Cargo.toml`
-   - `web_sys::console` pour les logs
-   - Bloque l'utilisation sur desktop/native
-
-2. **Architecture monolithique**
-   - `domius-web` contient toute la logique reactive + DOM
-   - Impossible de réutiliser le core sans WASM
-
-3. **Documentation Web-only**
-   - README ne mentionne que WASM
-   - QWEN.md décrit une architecture Web-centrique
-
----
-
-## 🏗️ Architecture Cible
-
-```
-domus/
-├── domius-core/        # ← Platform-agnostic (100% Rust std)
-│   ├── signal.rs       # Signal<T>, ReadSignal, WriteSignal
-│   ├── effect.rs       # Effect, create_effect, TLS tracking
-│   ├── scope.rs        # ScopeId, create_scope, dispose_scope
-│   ├── runtime.rs      # Batch system, scheduler
-│   ├── computed.rs     # Computed<T> (derived values)
-│   └── lib.rs          # Public API
-│
-├── domius-web/         # ← Backend WASM/Web
-│   ├── component.rs    # DomusComponent trait (web-sys)
-│   ├── disposal.rs     # MutationObserver-based cleanup
-│   ├── context.rs      # TypeId-based context (web-specific)
-│   ├── router.rs       # URL-based routing
-│   ├── list.rs         # Keyed list reconciliation
-│   └── lib.rs          # web-sys integration
-│
-├── domius-desktop/     # ← Backend Tauri (NOUVEAU)
-│   ├── component.rs    # DomusComponent trait (Tauri windows)
-│   ├── disposal.rs     # Window event-based cleanup
-│   ├── context.rs      # TypeId-based context (Tauri-specific)
-│   ├── router.rs       # Route handling (Tauri-specific)
-│   └── lib.rs          # Tauri integration
-│
-├── domius-macro/       # ← RSX parser (unchanged)
-│   └── lib.rs          # Proc-macro, platform-agnostic
-│
-├── domius-cli/         # ← CLI scaffolding (unchanged)
-│   └── main.rs         # Commands: new, add, build
-│
-└── examples/
-    ├── hello-world-web/    # Web example
-    └── hello-world-tauri/  # Tauri example (NOUVEAU)
+```text
+Application
+    |
+    +-- domius-ui -------- composants, RSX, état, cycle de vie
+    |
+    +-- domius-runtime --- fenêtres, commandes, événements, assets
+                                |
+                                +-- adaptateurs de plateforme privés
 ```
 
----
+## État constaté au 23 août 2026
 
-## 📝 Étapes de Refactorisation
+| Zone | État |
+|---|---|
+| `domius-core` | Signals, computed, effects, batch et scopes testés nativement |
+| `domius-macro` | Parseur et générateur présents ; l'entrée publique ne les relie pas encore |
+| `domius-web` | Runtime web utilisable, bibliothèque de composants très inégale |
+| `domius-desktop` | Types de composant, contexte, événements et destruction ; aucun moteur de fenêtre |
+| `domius-cli` | Génération et CSS scoping ; templates encore incomplets |
 
-### Phase 1 : `domius-core` Platform-Agnostic
+Les fichiers de composants ne constituent pas une preuve de fonctionnalité. Un
+module compte comme terminé seulement lorsqu'un exemple l'utilise et qu'un test
+navigateur ou natif vérifie son comportement.
 
-**Fichier : `domius-core/Cargo.toml`**
+## Architecture visée
 
-```toml
-[package]
-name = "domius-core"
-version = "0.1.0"
-edition = "2021"
+```text
+domius-core
+    Réactivité indépendante de la plateforme
 
-[dependencies]
-# AUCUNE dépendance WASM !
-# 100% Rust std
+domius-macro
+    RSX vers instructions de rendu Domius
 
-[dev-dependencies]
-# Tests natifs uniquement
+domius-ui
+    Composants, props, contexte, listes, routeur, erreurs
+
+domius-render-web
+    Instructions Domius vers DOM web_sys
+
+domius-desktop
+    Application, fenêtres, commandes, événements et arrêt propre
+
+domius-platform-webview
+    Adaptateur privé vers les webviews système
+
+domius-cli
+    new, add, dev, check, build, bundle et doctor
+
+domius
+    Façade publique et prelude
 ```
 
-**Changements requis :**
-
-| Fichier | Action | Détails |
-|---------|--------|---------|
-| `Cargo.toml` | ✂️ Supprimer | `wasm-bindgen`, `web-sys`, `js-sys` |
-| `src/lib.rs` | ✏️ Modifier | Retirer les imports WASM |
-| `src/signal.rs` | ✅ OK | Déjà 100% Rust std |
-| `src/effect.rs` | ✅ OK | Déjà 100% Rust std (TLS) |
-| `src/scope.rs` | ✅ OK | Déjà 100% Rust std |
-| `src/runtime.rs` | ✅ OK | Déjà 100% Rust std |
-| `src/computed.rs` | ✅ OK | Déjà 100% Rust std |
-
-**Code à modifier :**
-
-Aucun code de `domius-core` n'utilise directement `web-sys`. Les tests sont déjà natifs.
-
-**Validation :**
-```bash
-cd domius-core
-cargo build          # Doit compiler sans WASM
-cargo test           # Tests natifs doivent passer
-```
-
----
-
-### Phase 2 : `domius-web` Backend WASM
-
-**Fichier : `domius-web/Cargo.toml`**
-
-```toml
-[package]
-name = "domius-web"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-domius-core = { path = "../domius-core" }
-wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = [...] }
-js-sys = "0.3"
-
-[dev-dependencies]
-wasm-bindgen-test = "0.3"
-```
-
-**Changements requis :**
-
-| Fichier | Action | Détails |
-|---------|--------|---------|
-| `Cargo.toml` | ✏️ Modifier | Ajouter dépendance à `domius-core` |
-| `src/lib.rs` | ✏️ Modifier | Importer depuis `domius-core` |
-| `src/component.rs` | ⚠️ Adapter | Utiliser `domius_core::signal` au lieu de `crate::` |
-| `src/disposal.rs` | ✅ OK | Déjà WASM-gated |
-| `src/context.rs` | ⚠️ Adapter | Importer `Signal` depuis `domius-core` |
-| `src/router.rs` | ✅ OK | Indépendant |
-| `src/list.rs` | ✅ OK | Indépendant |
-
-**Code à modifier :**
-
-```rust
-// Avant
-use crate::signal::{signal, Signal};
-use crate::effect::create_effect;
-
-// Après
-use domius_core::{signal, Signal, create_effect};
-```
-
-**Validation :**
-```bash
-cd domius-web
-cargo check --target wasm32-unknown-unknown
-wasm-pack build --target web
-```
-
----
-
-### Phase 3 : `domius-desktop` Backend Tauri
-
-**Fichier : `domius-desktop/Cargo.toml`**
-
-```toml
-[package]
-name = "domius-desktop"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-domius-core = { path = "../domius-core" }
-domius-macro = { path = "../domius-macro" }
-tauri = { version = "2.0", features = [] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-[dev-dependencies]
-# Tests natifs
-```
-
-**Structure à créer :**
-
-```
-domius-desktop/
-├── Cargo.toml
-├── src/
-│   ├── lib.rs          # Entry point
-│   ├── component.rs    # DomusComponent trait (Tauri)
-│   ├── disposal.rs     # Window event-based cleanup
-│   ├── context.rs      # Context API (Tauri)
-│   ├── router.rs       # Route handling
-│   └── event.rs        # Event bridge (Rust → Tauri)
-```
-
-**Concepts clés :**
-
-1. **Composants** : Fenêtres Tauri ou composants web dans une WebView
-2. **Disposal** : Écouter `window.close()` et événements de destruction
-3. **Events** : Bridge Rust → Tauri commands
-4. **DOM** : Utiliser les APIs Tauri ou WebView selon l'approche
-
-**Exemple d'implémentation :**
-
-```rust
-// domius-desktop/src/component.rs
-use domius_core::{Signal, ScopeId, create_scope};
-use tauri::{AppHandle, Manager, WindowBuilder};
-
-pub trait DomusComponent {
-    type Props: Clone + Send + 'static;
-    type State: 'static;
-
-    fn setup(props: Self::Props) -> Self::State;
-    fn render(state: &Self::State, app: &AppHandle) -> WindowBuilder;
-}
-
-pub fn mount_component<C: DomusComponent>(
-    app: &AppHandle,
-    props: C::Props,
-) {
-    let state = C::setup(props);
-    let window = C::render(&state, app);
-    // Attacher le cleanup au window.close()
-}
-```
-
-**Validation :**
-```bash
-cd domius-desktop
-cargo check
-cargo build
-```
-
----
-
-### Phase 4 : Mise à Jour Documentation
-
-**Fichiers à modifier :**
-
-| Fichier | Action | Détails |
-|---------|--------|---------|
-| `README.md` | ✏️ Modifier | Expliquer architecture multi-cibles |
-| `QWEN.md` | ✏️ Modifier | Mettre à jour structure workspace |
-| `PROJECT.md` | ✏️ Modifier | Ajouter roadmap Tauri |
-| `CHANGELOG.md` | ✏️ Ajouter | Noter breaking changes |
-
-**Nouveau README — Section Architecture :**
-
-```markdown
-## Architecture Multi-Plateformes
-
-Domus utilise une architecture en couches :
-
-```
-┌─────────────────────────────────────┐
-│         Votre Application           │
-├─────────────────────────────────────┤
-│  domius-web  │  domius-desktop      │  ← Backends
-├─────────────────────────────────────┤
-│           domius-core               │  ← Core (100% Rust)
-├─────────────────────────────────────┤
-│           domius-macro              │  ← RSX parser
-└─────────────────────────────────────┘
-```
-
-### Choisir son Backend
-
-| Backend | Cible | Use Case |
-|---------|-------|----------|
-| `domius-web` | WASM/Web | Applications web, PWA |
-| `domius-desktop` | Tauri | Applications desktop (Windows, macOS, Linux) |
-```
-
----
-
-### Phase 5 : Exemples et Tests
-
-**À créer :**
-
-```
-examples/
-├── hello-world-web/        # Web/WASM example
-│   ├── Cargo.toml
-│   ├── index.html
-│   └── src/
-│       └── lib.rs
-│
-└── hello-world-tauri/      # Tauri example
-    ├── Cargo.toml
-    ├── tauri.conf.json
-    └── src/
-        └── main.rs
-```
-
-**Tests :**
-
-```bash
-# Tests natifs (core)
-cargo test -p domius-core
-
-# Tests WASM
-cargo test -p domius-web --target wasm32-unknown-unknown
-
-# Tests desktop
-cargo test -p domius-desktop
-```
-
----
-
-## 📅 Roadmap
-
-| Phase | Tâches | Statut |
-|-------|--------|--------|
-| 1. Core agnostic | Retirer deps WASM, valider tests | ⏳ Pending |
-| 2. Web backend | Adapter imports, valider build | ⏳ Pending |
-| 3. Desktop skeleton | Créer crate Tauri, implémenter traits | ⏳ Pending |
-| 4. Documentation | Mettre à jour README, QWEN.md | ⏳ Pending |
-| 5. Exemples | hello-world-web, hello-world-tauri | ⏳ Pending |
-
----
-
-## 🔍 Breaking Changes
-
-### Pour les Utilisateurs Actuels
-
-**Avant :**
-```toml
-[dependencies]
-domius-web = "0.1"
-```
-
-**Après :**
-```toml
-[dependencies]
-domius-core = "0.2"  # Core séparé
-domius-web = "0.2"   # Web backend
-```
-
-### Pour le Code
-
-**Avant :**
-```rust
-use domius_web::signal;
-```
-
-**Après :**
-```rust
-use domius_core::signal;
-```
-
----
-
-## ✅ Critères de Succès
-
-- [ ] `domius-core` compile sans dépendances WASM
-- [ ] Tous les tests natifs passent (`cargo test -p domius-core`)
-- [ ] `domius-web` build en WASM (`wasm-pack build`)
-- [ ] `domius-desktop` compile et lance une window Tauri
-- [ ] Documentation à jour (README, QWEN.md)
-- [ ] Exemples fonctionnels (web + desktop)
-
----
-
-## 📚 Références
-
-- [Tauri v2 Documentation](https://v2.tauri.app/)
-- [Rust TLS (Thread Local Storage)](https://doc.rust-lang.org/std/macro.thread_local.html)
-- [WASM Bindgen Guide](https://rustwasm.github.io/wasm-bindgen/)
+Cette structure décrit la destination. Une nouvelle crate n'est créée que
+lorsqu'un contrat testé exige son extraction.
+
+## Séquence de migration
+
+### M0 : zéro dépendance concurrente
+
+- retirer toute dépendance au framework desktop précédemment introduit ;
+- retirer l'ancien exemple qui l'utilisait ;
+- corriger la documentation et les commandes ;
+- ajouter un contrôle CI sur le graphe Cargo ;
+- conserver les 181 tests natifs au vert.
+
+Retour arrière : chaque changement reste dans un commit isolé. L'ancien exemple
+reste consultable dans l'historique Git sans rester actif dans l'arborescence.
+
+### M1 : noyau UI honnête
+
+- connecter la macro publique au générateur RSX ;
+- définir montage, mise à jour et démontage ;
+- relier les expressions réactives aux nœuds concernés ;
+- terminer attributs, événements, fragments et listes indexées ;
+- remplacer les panics de parcours par des erreurs Domius ;
+- réécrire `examples/hello-world` avec l'API Domius uniquement.
+
+Condition de sortie : le compteur et la todo list ne construisent plus leur DOM
+manuellement, et leur retrait détruit tous les effets associés.
+
+### M2 : tranche desktop verticale
+
+- créer un builder d'application Domius ;
+- ouvrir une fenêtre et charger les assets locaux ;
+- enregistrer une commande Rust typée ;
+- transmettre événements et réponses corrélées ;
+- ouvrir une deuxième fenêtre ;
+- fermer chaque fenêtre et détruire son scope ;
+- arrêter le processus sans thread orphelin.
+
+Le premier moteur peut utiliser une bibliothèque de webview et de fenêtre sous
+un adaptateur privé. L'API publique appartient entièrement à Domius.
+
+### M3 : tooling
+
+- rendre les projets générés compilables ;
+- ajouter `domius dev`, puis `domius check` et `domius build` ;
+- recharger CSS et assets sans recompilation complète ;
+- fournir un diagnostic des dépendances système ;
+- ajouter le packaging une plateforme après l'autre.
+
+### M4 : applications de preuve
+
+- `examples/operations-control-center` couvre runtime, routes et données ;
+- `examples/collaborative-media-studio` couvre RSX, formulaires et média ;
+- `examples/desktop-project-command` couvre fenêtres, commandes et événements.
+
+Un composant manquant se corrige dans la bibliothèque avec son test. Aucun
+exemple ne garde une copie locale destinée à masquer une API inachevée.
+
+## Frontières de sécurité desktop
+
+Le runtime refuse par défaut tout appel non enregistré. Chaque message possède
+un identifiant, une commande connue, une charge sérialisée et une réponse typée.
+Le host contrôle l'origine, la navigation externe, la taille des messages et la
+politique de contenu. Les permissions se définissent par fenêtre.
+
+Ces règles précèdent les plugins et le système de mise à jour.
+
+## Ordre des plateformes
+
+1. Windows pour établir le runtime et les tests de bout en bout ;
+2. Linux pour traiter WebKitGTK et les différences de protocole ;
+3. macOS pour WKWebView, signature et notarisation ;
+4. mobile après stabilisation du desktop.
+
+## Règles de contribution
+
+- un commit porte une seule intention ;
+- tout changement de contrat public inclut un test ;
+- les adaptateurs ne remontent pas leurs types dans les crates publiques ;
+- une fonctionnalité annoncée dans le README doit avoir un parcours exécutable ;
+- les marqueurs `todo!` restent interdits sur les chemins publics ;
+- le graphe Cargo ne peut pas réintroduire un framework concurrent.
+
+## Définition de la première version desktop
+
+Une application générée par le CLI compile, ouvre une fenêtre, sert une UI
+Domius, appelle une commande native, reçoit un événement, ouvre puis ferme une
+seconde fenêtre et produit un paquet installable sur Windows. Tout le parcours
+dispose correctement ses scopes et passe en CI.
