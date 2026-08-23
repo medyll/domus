@@ -50,12 +50,12 @@ pub mod hooks;
 pub mod utils;
 
 // Re-exports from core modules
-pub use component::{DomiusComponent, DomiusNode, mount_component};
+pub use component::{mount_component, DomiusComponent, DomiusNode};
 pub use page::DomiusPage;
-pub use router::{Router, RoutePattern};
+pub use router::{RoutePattern, Router};
 
 // Re-exports from hooks
-pub use hooks::{use_click_outside, use_keyboard, use_focus};
+pub use hooks::{use_click_outside, use_focus, use_keyboard};
 
 // Re-exports from utils
 pub use utils::class_names;

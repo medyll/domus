@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       
@@ -39,7 +39,7 @@ jobs:
         run: cargo clippy --workspace --all-targets
       
       - name: Run tests (native)
-        run: cargo test --workspace --exclude hello-world
+        run: cargo test --workspace --locked
       
       - name: Build all targets
         run: cargo build --workspace --release
@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
       
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -64,7 +64,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       
       - name: Run tests (native)
-        run: cargo test --workspace --exclude hello-world
+        run: cargo test --workspace --locked
 
   # WASM tests
   test-wasm:
@@ -74,9 +74,9 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
-          target: wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown
       
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
@@ -90,9 +90,6 @@ jobs:
             target
           key: ${{ runner.os }}-wasm-cargo-${{ hashFiles('**/Cargo.lock') }}
       
-      - name: Run WASM tests (domius-core)
-        run: wasm-pack test --headless --firefox domius-core
-      
       - name: Run WASM tests (domius-web)
         run: wasm-pack test --headless --firefox domius-web
 
@@ -104,9 +101,9 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
-          target: wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown
       
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
@@ -124,7 +121,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
       
       - name: Check documentation
         run: cargo doc --workspace --no-deps --document-private-items

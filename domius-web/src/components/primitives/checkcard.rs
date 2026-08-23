@@ -39,9 +39,9 @@ pub struct CheckCardProps {
 /// ```
 pub fn checkcard(props: CheckCardProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("checkcard");
     if props.checked {
         classes.push_str(" checkcard-checked");

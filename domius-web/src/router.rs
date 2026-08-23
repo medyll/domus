@@ -46,7 +46,10 @@ impl RoutePattern {
                 .collect()
         };
 
-        Self { raw: pattern.to_string(), segments }
+        Self {
+            raw: pattern.to_string(),
+            segments,
+        }
     }
 
     /// Try to match `path` against this pattern.

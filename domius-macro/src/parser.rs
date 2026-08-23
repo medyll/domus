@@ -24,21 +24,23 @@ pub enum RsxNode {
 impl std::fmt::Debug for RsxNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Element { tag, attrs, children } => {
-                f.debug_struct("Element")
-                    .field("tag", tag)
-                    .field("attrs", attrs)
-                    .field("children", children)
-                    .finish()
-            }
+            Self::Element {
+                tag,
+                attrs,
+                children,
+            } => f
+                .debug_struct("Element")
+                .field("tag", tag)
+                .field("attrs", attrs)
+                .field("children", children)
+                .finish(),
             Self::Text(s) => f.debug_tuple("Text").field(s).finish(),
             Self::Dynamic(_) => f.debug_tuple("Dynamic").field(&"<expr>").finish(),
-            Self::Component { name, props } => {
-                f.debug_struct("Component")
-                    .field("name", name)
-                    .field("props", props)
-                    .finish()
-            }
+            Self::Component { name, props } => f
+                .debug_struct("Component")
+                .field("name", name)
+                .field("props", props)
+                .finish(),
         }
     }
 }
@@ -162,7 +164,11 @@ impl<'a> RustStyleParser<'a> {
             Vec::new()
         };
 
-        Ok(RsxNode::Element { tag, attrs, children })
+        Ok(RsxNode::Element {
+            tag,
+            attrs,
+            children,
+        })
     }
 
     fn parse_attributes(&mut self, stream: TokenStream) -> SynResult<Vec<(String, RsxAttr)>> {
@@ -216,9 +222,13 @@ impl<'a> RustStyleParser<'a> {
                     while i < tokens.len() {
                         match &tokens[i] {
                             // Groups are self-contained in proc_macro2 — no depth needed
-                            TokenTree::Group(_) => { i += 1; }
+                            TokenTree::Group(_) => {
+                                i += 1;
+                            }
                             TokenTree::Punct(p) if p.as_char() == ',' => break,
-                            _ => { i += 1; }
+                            _ => {
+                                i += 1;
+                            }
                         }
                     }
                     if start == i {
@@ -302,9 +312,7 @@ impl HtmlStyleParser {
     }
 
     fn peek_char(&self, offset: usize) -> Option<char> {
-        self.source[self.pos..]
-            .chars()
-            .nth(offset)
+        self.source[self.pos..].chars().nth(offset)
     }
 
     fn advance(&mut self, count: usize) {
@@ -380,7 +388,10 @@ impl HtmlStyleParser {
                 if closing_tag != tag {
                     return Err(Error::new(
                         Span::call_site(),
-                        format!("mismatched closing tag: expected '{}', found '{}'", tag, closing_tag),
+                        format!(
+                            "mismatched closing tag: expected '{}', found '{}'",
+                            tag, closing_tag
+                        ),
                     ));
                 }
                 self.skip_whitespace();
@@ -390,7 +401,11 @@ impl HtmlStyleParser {
             }
         }
 
-        Ok(RsxNode::Element { tag, attrs, children })
+        Ok(RsxNode::Element {
+            tag,
+            attrs,
+            children,
+        })
     }
 
     fn parse_tag_name(&mut self) -> SynResult<String> {
@@ -433,7 +448,10 @@ impl HtmlStyleParser {
 
         // Expect '='
         if self.current_char() != Some('=') {
-            return Err(Error::new(Span::call_site(), "expected '=' after attribute name"));
+            return Err(Error::new(
+                Span::call_site(),
+                "expected '=' after attribute name",
+            ));
         }
         self.advance(1);
         self.skip_whitespace();
@@ -568,7 +586,11 @@ mod tests {
         assert!(result.is_ok());
         let node = result.unwrap();
         match node {
-            RsxNode::Element { tag, attrs, children } => {
+            RsxNode::Element {
+                tag,
+                attrs,
+                children,
+            } => {
                 assert_eq!(tag, "div");
                 assert!(attrs.is_empty());
                 assert_eq!(children.len(), 1);
@@ -663,9 +685,9 @@ mod tests {
         match node {
             RsxNode::Element { tag, children, .. } => {
                 assert_eq!(tag, "div");
-                assert!(children.iter().any(|c| {
-                    matches!(c, RsxNode::Element { tag, .. } if tag == "span")
-                }));
+                assert!(children
+                    .iter()
+                    .any(|c| { matches!(c, RsxNode::Element { tag, .. } if tag == "span") }));
             }
             _ => panic!("expected Element"),
         }
@@ -775,10 +797,7 @@ mod tests {
 
         // Both should be Elements with same tag
         match (&rust_result, &html_result) {
-            (
-                RsxNode::Element { tag: t1, .. },
-                RsxNode::Element { tag: t2, .. },
-            ) => {
+            (RsxNode::Element { tag: t1, .. }, RsxNode::Element { tag: t2, .. }) => {
                 assert_eq!(t1, t2);
                 assert_eq!(t1, "div");
             }

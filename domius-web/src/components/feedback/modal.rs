@@ -74,20 +74,14 @@ impl Modal {
             .expect("no document");
 
         // Create backdrop
-        let backdrop: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
+        let backdrop: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+        backdrop
+            .set_attribute("class", "domius-modal-backdrop")
             .unwrap();
-        backdrop.set_attribute("class", "domius-modal-backdrop").unwrap();
 
         // Create modal container
-        let modal: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
-        
+        let modal: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+
         let mut classes = vec!["domius-modal".to_string()];
         classes.push(format!("domius-modal-{:?}", props.size).to_lowercase());
         if let Some(class) = &props.class {
@@ -99,20 +93,17 @@ impl Modal {
 
         // Create header
         if props.title.is_some() || props.closable {
-            let header: HtmlElement = document
-                .create_element("div")
-                .unwrap()
-                .dyn_into()
+            let header: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+            header
+                .set_attribute("class", "domius-modal-header")
                 .unwrap();
-            header.set_attribute("class", "domius-modal-header").unwrap();
 
             if let Some(title) = &props.title {
-                let title_el: HtmlElement = document
-                    .create_element("h2")
-                    .unwrap()
-                    .dyn_into()
+                let title_el: HtmlElement =
+                    document.create_element("h2").unwrap().dyn_into().unwrap();
+                title_el
+                    .set_attribute("class", "domius-modal-title")
                     .unwrap();
-                title_el.set_attribute("class", "domius-modal-title").unwrap();
                 title_el.set_text_content(Some(title));
                 header.append_child(&title_el).unwrap();
             }
@@ -123,7 +114,9 @@ impl Modal {
                     .unwrap()
                     .dyn_into()
                     .unwrap();
-                close_btn.set_attribute("class", "domius-modal-close").unwrap();
+                close_btn
+                    .set_attribute("class", "domius-modal-close")
+                    .unwrap();
                 close_btn.set_attribute("aria-label", "Close").unwrap();
                 close_btn.set_text_content(Some("×"));
 
@@ -131,8 +124,10 @@ impl Modal {
                     let handler_ref = handler;
                     let closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
                         handler_ref();
-                    }) as Box<dyn FnMut(MouseEvent)>);
-                    close_btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    })
+                        as Box<dyn FnMut(MouseEvent)>);
+                    close_btn
+                        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                         .unwrap();
                     closure.forget();
                 }
@@ -144,23 +139,17 @@ impl Modal {
         }
 
         // Create body
-        let body: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let body: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
         body.set_attribute("class", "domius-modal-body").unwrap();
         body.set_text_content(Some(&props.content));
         modal.append_child(&body).unwrap();
 
         // Create footer if needed
         if props.show_footer {
-            let footer: HtmlElement = document
-                .create_element("div")
-                .unwrap()
-                .dyn_into()
+            let footer: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+            footer
+                .set_attribute("class", "domius-modal-footer")
                 .unwrap();
-            footer.set_attribute("class", "domius-modal-footer").unwrap();
 
             // Cancel button
             if let Some(cancel_text) = &props.cancel_text {
@@ -169,15 +158,19 @@ impl Modal {
                     .unwrap()
                     .dyn_into()
                     .unwrap();
-                cancel_btn.set_attribute("class", "domius-btn domius-btn-secondary").unwrap();
+                cancel_btn
+                    .set_attribute("class", "domius-btn domius-btn-secondary")
+                    .unwrap();
                 cancel_btn.set_text_content(Some(cancel_text));
 
                 if let Some(handler) = props.on_close.as_ref() {
                     let handler_ref = handler;
                     let closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
                         handler_ref();
-                    }) as Box<dyn FnMut(MouseEvent)>);
-                    cancel_btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    })
+                        as Box<dyn FnMut(MouseEvent)>);
+                    cancel_btn
+                        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                         .unwrap();
                     closure.forget();
                 }
@@ -192,15 +185,19 @@ impl Modal {
                     .unwrap()
                     .dyn_into()
                     .unwrap();
-                confirm_btn.set_attribute("class", "domius-btn domius-btn-primary").unwrap();
+                confirm_btn
+                    .set_attribute("class", "domius-btn domius-btn-primary")
+                    .unwrap();
                 confirm_btn.set_text_content(Some(confirm_text));
 
                 if let Some(handler) = props.on_confirm.as_ref() {
                     let handler_ref = handler;
                     let closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
                         handler_ref();
-                    }) as Box<dyn FnMut(MouseEvent)>);
-                    confirm_btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                    })
+                        as Box<dyn FnMut(MouseEvent)>);
+                    confirm_btn
+                        .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                         .unwrap();
                     closure.forget();
                 }
@@ -218,7 +215,10 @@ impl Modal {
             let on_close_ref = props.on_close.as_ref();
             let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
                 if let Some(handler) = on_close_ref {
-                    if event.target().unwrap().dyn_ref::<web_sys::Element>()
+                    if event
+                        .target()
+                        .unwrap()
+                        .dyn_ref::<web_sys::Element>()
                         .map(|el| el.class_list().contains("domius-modal-backdrop"))
                         .unwrap_or(false)
                     {
@@ -226,8 +226,9 @@ impl Modal {
                     }
                 }
             }) as Box<dyn FnMut(MouseEvent)>);
-            
-            backdrop.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+
+            backdrop
+                .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                 .unwrap();
             closure.forget();
         }

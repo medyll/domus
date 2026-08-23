@@ -125,11 +125,7 @@ mod tests {
 
         create_effect(move || {
             let f = flag_clone.get();
-            let val = if f {
-                a_clone.get()
-            } else {
-                b_clone.get()
-            };
+            let val = if f { a_clone.get() } else { b_clone.get() };
             values_clone.borrow_mut().push(val);
         });
 

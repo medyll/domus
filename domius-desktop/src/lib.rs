@@ -6,7 +6,13 @@
 //! - Context API
 //! - Event handling
 
-#![allow(missing_docs, dead_code, unused_variables, unused_imports, static_mut_refs)]
+#![allow(
+    missing_docs,
+    dead_code,
+    unused_variables,
+    unused_imports,
+    static_mut_refs
+)]
 
 pub mod component;
 pub mod context;
@@ -21,7 +27,7 @@ pub fn init() {
 
 // Re-exports
 pub use component::{
-    build_window_config, cleanup_component_scope, DomiusDesktopComponent,
-    get_component_url, ComponentScope,
+    build_window_config, cleanup_component_scope, get_component_url, ComponentScope,
+    DomiusDesktopComponent,
 };
 pub use context::{provide_context, use_context};

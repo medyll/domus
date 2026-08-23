@@ -48,9 +48,9 @@ pub struct CountdownProps {
 /// ```
 pub fn countdown(props: CountdownProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("countdown");
     if let Some(class) = &props.class {
         classes.push_str(" ");
@@ -69,13 +69,13 @@ pub fn countdown(props: CountdownProps) -> Element {
     // Value display
     let value_el: Element = document.create_element("div").unwrap();
     value_el.set_class_name("countdown-value");
-    
+
     // Calculate remaining time
     let current = props.current.unwrap_or_else(|| {
         // Use current time if not provided
         js_sys::Date::now() as u64 / 1000
     });
-    
+
     let remaining = if props.target > current {
         props.target - current
     } else {
@@ -96,7 +96,11 @@ pub fn countdown(props: CountdownProps) -> Element {
     container
 }
 
-fn format_countdown(remaining: u64, format: &CountdownFormat, format_string: &Option<String>) -> String {
+fn format_countdown(
+    remaining: u64,
+    format: &CountdownFormat,
+    format_string: &Option<String>,
+) -> String {
     let days = remaining / 86400;
     let hours = (remaining % 86400) / 3600;
     let minutes = (remaining % 3600) / 60;

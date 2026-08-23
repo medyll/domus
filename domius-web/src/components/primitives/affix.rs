@@ -31,9 +31,9 @@ pub struct AffixProps {
 /// ```
 pub fn affix(props: AffixProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("affix");
     if let Some(class) = &props.class {
         classes.push_str(" ");
@@ -42,12 +42,16 @@ pub fn affix(props: AffixProps) -> Element {
     container.set_class_name(&classes);
 
     // Store offset as data attribute for CSS/JS handling
-    container.set_attribute("data-offset-top", &props.offset_top.to_string()).ok();
-    
+    container
+        .set_attribute("data-offset-top", &props.offset_top.to_string())
+        .ok();
+
     if let Some(offset_bottom) = props.offset_bottom {
-        container.set_attribute("data-offset-bottom", &offset_bottom.to_string()).ok();
+        container
+            .set_attribute("data-offset-bottom", &offset_bottom.to_string())
+            .ok();
     }
-    
+
     if let Some(target) = &props.target {
         container.set_attribute("data-target", target).ok();
     }

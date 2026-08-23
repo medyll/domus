@@ -78,10 +78,7 @@ pub trait DomiusComponent {
 /// ```ignore
 /// let state = mount_component::<Counter>(CounterProps { initial: 0 }, &body);
 /// ```
-pub fn mount_component<C: DomiusComponent>(
-    props: C::Props,
-    parent: &web_sys::Element,
-) -> C::State {
+pub fn mount_component<C: DomiusComponent>(props: C::Props, parent: &web_sys::Element) -> C::State {
     C::mount(props, parent)
 }
 
@@ -102,13 +99,13 @@ mod tests {
     /// Minimal component with unit props/state
     struct NullComponent;
 
-    /// We can't impl DomiusComponent with MockNode since DomiusNode = web_sys::Element.
-    /// Instead, test the trait pattern using a standalone struct.
-    ///
-    /// These tests verify that the trait's associated types and method signatures
-    /// are structurally correct by checking a concrete implementation compiles.
-    ///
-    /// Full mount tests require WASM (`wasm-pack test`).
+    // We can't impl DomiusComponent with MockNode since DomiusNode = web_sys::Element.
+    // Instead, test the trait pattern using a standalone struct.
+    //
+    // These tests verify that the trait's associated types and method signatures
+    // are structurally correct by checking a concrete implementation compiles.
+    //
+    // Full mount tests require WASM (`wasm-pack test`).
 
     // ---------------------------------------------------------------------------
     // Props / State type tests
@@ -209,7 +206,9 @@ mod tests {
                 }
             }
         }
-        let state = ComputedComp::setup(ComputedProps { values: vec![1, 2, 3, 4] });
+        let state = ComputedComp::setup(ComputedProps {
+            values: vec![1, 2, 3, 4],
+        });
         assert_eq!(state.sum, 10);
         assert_eq!(state.count, 4);
     }

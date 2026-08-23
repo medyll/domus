@@ -186,11 +186,7 @@ impl Text {
             .expect("no document");
 
         let tag = props.variant.as_tag();
-        let element: HtmlElement = document
-            .create_element(tag)
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let element: HtmlElement = document.create_element(tag).unwrap().dyn_into().unwrap();
 
         // Build class names
         let mut classes = vec![

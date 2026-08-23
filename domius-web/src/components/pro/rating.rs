@@ -62,11 +62,7 @@ impl Rating {
             .document()
             .expect("no document");
 
-        let container: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let container: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
         container.set_attribute("class", "domius-rating").unwrap();
 
         let icon_char = match props.icon {
@@ -77,12 +73,8 @@ impl Rating {
         };
 
         for i in 1..=props.max {
-            let icon_el: HtmlElement = document
-                .create_element("span")
-                .unwrap()
-                .dyn_into()
-                .unwrap();
-            
+            let icon_el: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
+
             let mut classes = vec!["domius-rating-icon".to_string()];
             if i <= props.value.get() {
                 classes.push("domius-rating-filled".to_string());
@@ -90,7 +82,9 @@ impl Rating {
             icon_el.set_attribute("class", &classes.join(" ")).unwrap();
             icon_el.set_attribute("data-value", &i.to_string()).unwrap();
             icon_el.set_text_content(Some(icon_char));
-            icon_el.set_attribute("style", &format!("font-size: {}px", props.size)).unwrap();
+            icon_el
+                .set_attribute("style", &format!("font-size: {}px", props.size))
+                .unwrap();
 
             if !props.readonly {
                 let value_clone = props.value.clone();
@@ -106,12 +100,17 @@ impl Rating {
                     value_clone.set(i);
                 }) as Box<dyn FnMut(MouseEvent)>);
 
-                icon_el.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+                icon_el
+                    .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                     .unwrap();
                 closure.forget();
 
                 if let Some(change_closure) = on_change_clone {
-                    icon_el.add_event_listener_with_callback("click", change_closure.as_ref().unchecked_ref())
+                    icon_el
+                        .add_event_listener_with_callback(
+                            "click",
+                            change_closure.as_ref().unchecked_ref(),
+                        )
                         .unwrap();
                     change_closure.forget();
                 }

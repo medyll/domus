@@ -109,13 +109,13 @@ impl KeyboardConfig {
 /// ```
 pub fn use_keyboard(config: KeyboardConfig) -> Signal<bool> {
     use domius_core::signal::signal;
-    
+
     let pressed = signal(false);
     let config_clone = config.clone();
     let pressed_clone = pressed.clone();
-    
+
     let event_name = if config.keydown { "keydown" } else { "keyup" };
-    
+
     let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
         if config_clone.matches(&event) {
             pressed_clone.set(true);
@@ -135,14 +135,14 @@ pub fn use_keyboard(config: KeyboardConfig) -> Signal<bool> {
             }
         }
     }) as Box<dyn FnMut(KeyboardEvent)>);
-    
+
     if let Some(window) = web_sys::window() {
         window
             .add_event_listener_with_callback(event_name, closure.as_ref().unchecked_ref())
             .expect("Failed to add keyboard listener");
         closure.forget();
     }
-    
+
     pressed
 }
 
@@ -159,7 +159,7 @@ where
     F: Fn() + 'static,
 {
     let pressed = use_keyboard(config.clone());
-    
+
     create_effect(move || {
         if pressed.get() {
             callback();

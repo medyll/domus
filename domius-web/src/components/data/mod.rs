@@ -2,20 +2,20 @@
 //!
 //! Components: DataTable, Charts, Carousel, Badge, AvatarGroup, Timeline, TreeView, Message, Comment, Statistic
 
-pub mod badge;
 pub mod avatar;
-pub mod timeline;
-pub mod table;
+pub mod badge;
 pub mod carousel;
-pub mod tree_view;
 pub mod charts;
-pub mod message;
 pub mod comment;
+pub mod message;
 pub mod statistic;
+pub mod table;
+pub mod timeline;
+pub mod tree_view;
 
 // Re-exports
+pub use avatar::{Avatar, AvatarGroup, AvatarGroupProps, AvatarProps};
 pub use badge::{Badge, BadgeProps, BadgeVariant};
-pub use avatar::{Avatar, AvatarProps, AvatarGroup, AvatarGroupProps};
-pub use message::{message, chat, MessageProps, MessagePosition, ChatProps};
-pub use comment::{comment, comment_list, CommentProps, CommentAction, CommentListProps};
-pub use statistic::{statistic, statistic_card, StatisticProps, StatisticCardProps, TrendType};
+pub use comment::{comment, comment_list, CommentAction, CommentListProps, CommentProps};
+pub use message::{chat, message, ChatProps, MessagePosition, MessageProps};
+pub use statistic::{statistic, statistic_card, StatisticCardProps, StatisticProps, TrendType};

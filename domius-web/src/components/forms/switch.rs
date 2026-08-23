@@ -68,7 +68,9 @@ impl Switch {
         if let Some(class) = &props.class {
             classes.push(class.clone());
         }
-        container.set_attribute("class", &classes.join(" ")).unwrap();
+        container
+            .set_attribute("class", &classes.join(" "))
+            .unwrap();
 
         // Create hidden checkbox input
         let input: HtmlElement = document
@@ -78,7 +80,7 @@ impl Switch {
             .unwrap();
         input.set_attribute("type", "checkbox").unwrap();
         input.set_attribute("class", "domius-switch-input").unwrap();
-        
+
         if props.checked.get() {
             input.set_attribute("checked", "true").unwrap();
         }
@@ -87,11 +89,7 @@ impl Switch {
         }
 
         // Create slider visual
-        let slider: HtmlElement = document
-            .create_element("span")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
+        let slider: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
         slider.set_attribute("class", "domius-slider").unwrap();
 
         container.append_child(&input).unwrap();
@@ -99,12 +97,11 @@ impl Switch {
 
         // Add label if provided
         if let Some(label) = &props.label {
-            let label_el: HtmlElement = document
-                .create_element("span")
-                .unwrap()
-                .dyn_into()
+            let label_el: HtmlElement =
+                document.create_element("span").unwrap().dyn_into().unwrap();
+            label_el
+                .set_attribute("class", "domius-switch-label")
                 .unwrap();
-            label_el.set_attribute("class", "domius-switch-label").unwrap();
             label_el.set_text_content(Some(label));
             container.append_child(&label_el).unwrap();
         }
@@ -124,12 +121,17 @@ impl Switch {
                 checked_clone.set(!checked_clone.get());
             }) as Box<dyn FnMut(MouseEvent)>);
 
-            container.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            container
+                .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
                 .unwrap();
             closure.forget();
 
             if let Some(change_closure) = on_change_clone {
-                container.add_event_listener_with_callback("click", change_closure.as_ref().unchecked_ref())
+                container
+                    .add_event_listener_with_callback(
+                        "click",
+                        change_closure.as_ref().unchecked_ref(),
+                    )
                     .unwrap();
                 change_closure.forget();
             }

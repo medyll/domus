@@ -65,9 +65,9 @@ pub struct TreeSelectProps {
 /// ```
 pub fn treeselect(props: TreeSelectProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("treeselect");
     if props.disabled {
         classes.push_str(" treeselect-disabled");
@@ -81,11 +81,13 @@ pub fn treeselect(props: TreeSelectProps) -> Element {
     // Select trigger
     let trigger: Element = document.create_element("div").unwrap();
     trigger.set_class_name("treeselect-trigger");
-    
+
     // Placeholder or selected value
     let value_display: Element = document.create_element("span").unwrap();
     value_display.set_class_name("treeselect-value");
-    value_display.set_text_content(Some(&props.placeholder.unwrap_or_else(|| "Select...".to_string())));
+    value_display.set_text_content(Some(
+        &props.placeholder.unwrap_or_else(|| "Select...".to_string()),
+    ));
     trigger.append_child(&value_display).unwrap();
 
     // Arrow icon
@@ -131,11 +133,13 @@ fn render_tree_node(document: &web_sys::Document, node: &TreeNode, level: u32) -
     let node_container: Element = document.create_element("div").unwrap();
     node_container.set_class_name("treeselect-node");
     node_container.set_attribute("data-value", &node.value).ok();
-    
+
     // Indentation
     let indent: Element = document.create_element("span").unwrap();
     indent.set_class_name("treeselect-indent");
-    indent.set_attribute("style", &format!("width: {}px;", level * 20)).ok();
+    indent
+        .set_attribute("style", &format!("width: {}px;", level * 20))
+        .ok();
     node_container.append_child(&indent).unwrap();
 
     // Expand/collapse icon (if has children)
@@ -174,12 +178,12 @@ fn render_tree_node(document: &web_sys::Document, node: &TreeNode, level: u32) -
         let children_container: Element = document.create_element("div").unwrap();
         children_container.set_class_name("treeselect-children");
         children_container.set_attribute("hidden", "").ok();
-        
+
         for child in children {
             let child_el = render_tree_node(document, child, level + 1);
             children_container.append_child(&child_el).unwrap();
         }
-        
+
         node_container.append_child(&children_container).unwrap();
     }
 

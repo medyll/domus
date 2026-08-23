@@ -46,7 +46,7 @@ pub struct TitleProps {
 /// Build a Title component.
 pub fn title(props: TitleProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let tag = match props.level {
         TitleLevel::H1 => "h1",
         TitleLevel::H2 => "h2",
@@ -57,7 +57,7 @@ pub fn title(props: TitleProps) -> Element {
     };
 
     let title: Element = document.create_element(tag).unwrap();
-    
+
     let mut classes = String::from("title");
     if props.muted {
         classes.push_str(" title-muted");
@@ -70,14 +70,14 @@ pub fn title(props: TitleProps) -> Element {
 
     // Build content with modifiers
     let mut content = props.text.clone();
-    
+
     if props.mark {
         let mark_el: Element = document.create_element("mark").unwrap();
         mark_el.set_text_content(Some(&content));
         content = String::new();
         title.append_child(&mark_el).unwrap();
     }
-    
+
     if props.code {
         let code_el: Element = document.create_element("code").unwrap();
         code_el.set_text_content(Some(&content));
@@ -107,11 +107,18 @@ pub fn title(props: TitleProps) -> Element {
     }
 
     if !content.is_empty() {
-        title.append_child(&document.create_text_node(&content)).unwrap();
+        title
+            .append_child(&document.create_text_node(&content))
+            .unwrap();
     }
 
     if props.ellipsis {
-        title.set_attribute("style", "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;").ok();
+        title
+            .set_attribute(
+                "style",
+                "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+            )
+            .ok();
     }
 
     title
@@ -143,9 +150,9 @@ pub struct ParagraphProps {
 /// Build a Paragraph component.
 pub fn paragraph(props: ParagraphProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let p: Element = document.create_element("p").unwrap();
-    
+
     let mut classes = String::from("paragraph");
     if props.muted {
         classes.push_str(" paragraph-muted");
@@ -183,7 +190,11 @@ pub fn paragraph(props: ParagraphProps) -> Element {
                 rows
             )).ok();
         } else {
-            p.set_attribute("style", "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;").ok();
+            p.set_attribute(
+                "style",
+                "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+            )
+            .ok();
         }
     }
 
@@ -208,29 +219,29 @@ pub struct LinkProps {
 /// Build a Link component.
 pub fn link(props: LinkProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let a: Element = document.create_element("a").unwrap();
     a.set_class_name("link");
     a.set_attribute("href", &props.href).ok();
-    
+
     if let Some(class) = &props.class {
         a.set_class_name(&format!("link {}", class));
     }
-    
+
     if props.target_blank {
         a.set_attribute("target", "_blank").ok();
         a.set_attribute("rel", "noopener noreferrer").ok();
     }
-    
+
     a.set_text_content(Some(&props.text));
-    
+
     if props.external {
         let icon: Element = document.create_element("span").unwrap();
         icon.set_class_name("link-external-icon");
         icon.set_inner_html("&#8599;"); // ↗ symbol
         a.append_child(&icon).unwrap();
     }
-    
+
     a
 }
 
@@ -260,9 +271,9 @@ pub struct TextProps {
 /// Build a Text component.
 pub fn text(props: TextProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let span: Element = document.create_element("span").unwrap();
-    
+
     let mut classes = String::from("text");
     if props.muted {
         classes.push_str(" text-muted");

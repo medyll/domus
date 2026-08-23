@@ -50,10 +50,10 @@ impl Default for AudioPlayerProps {
 /// ```
 pub fn audio_player(props: AudioPlayerProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     // Create audio element
     let audio: Element = document.create_element("audio").unwrap();
-    
+
     if let Some(class) = &props.class {
         audio.set_class_name(class);
     }

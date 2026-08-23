@@ -1,7 +1,7 @@
 //! Tooltip component - Hover information popup.
 
-use domius_core::signal::{signal, Signal};
 use domius_core::effect::create_effect;
+use domius_core::signal::{signal, Signal};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement, MouseEvent};
@@ -67,12 +67,10 @@ impl Tooltip {
             .expect("no document");
 
         // Wrapper container
-        let wrapper: HtmlElement = document
-            .create_element("span")
-            .unwrap()
-            .dyn_into()
+        let wrapper: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
+        wrapper
+            .set_attribute("class", "domius-tooltip-wrapper")
             .unwrap();
-        wrapper.set_attribute("class", "domius-tooltip-wrapper").unwrap();
 
         // Append children
         wrapper.append_child(&props.children).unwrap();
@@ -82,12 +80,8 @@ impl Tooltip {
         }
 
         // Create tooltip element (hidden by default)
-        let tooltip: HtmlElement = document
-            .create_element("div")
-            .unwrap()
-            .dyn_into()
-            .unwrap();
-        
+        let tooltip: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
+
         let mut classes = vec![
             "domius-tooltip".to_string(),
             format!("domius-tooltip-{:?}", props.position).to_lowercase(),
@@ -111,7 +105,7 @@ impl Tooltip {
         let show_closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
             let is_visible_clone = is_visible_show.clone();
             let tooltip_clone = tooltip_show.clone();
-            
+
             if delay_show > 0 {
                 let timeout_closure = Closure::once(move || {
                     is_visible_clone.set(true);
@@ -130,7 +124,8 @@ impl Tooltip {
             }
         }) as Box<dyn FnMut(MouseEvent)>);
 
-        wrapper.add_event_listener_with_callback("mouseenter", show_closure.as_ref().unchecked_ref())
+        wrapper
+            .add_event_listener_with_callback("mouseenter", show_closure.as_ref().unchecked_ref())
             .unwrap();
         show_closure.forget();
 
@@ -142,7 +137,8 @@ impl Tooltip {
             tooltip_hide.set_attribute("aria-hidden", "true").ok();
         }) as Box<dyn FnMut(MouseEvent)>);
 
-        wrapper.add_event_listener_with_callback("mouseleave", hide_closure.as_ref().unchecked_ref())
+        wrapper
+            .add_event_listener_with_callback("mouseleave", hide_closure.as_ref().unchecked_ref())
             .unwrap();
         hide_closure.forget();
 

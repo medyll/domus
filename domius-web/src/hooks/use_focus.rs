@@ -15,7 +15,7 @@ use web_sys::{Element, Event, FocusEvent, HtmlElement};
 /// # Example
 /// ```ignore
 /// let (is_focused, focus_cb, blur_cb) = use_focus();
-/// 
+///
 /// domius! {
 ///     input(
 ///         on_focus: focus_cb,
@@ -24,21 +24,25 @@ use web_sys::{Element, Event, FocusEvent, HtmlElement};
 ///     )
 /// }
 /// ```
-pub fn use_focus() -> (Signal<bool>, Box<dyn Fn(FocusEvent)>, Box<dyn Fn(FocusEvent)>) {
+pub fn use_focus() -> (
+    Signal<bool>,
+    Box<dyn Fn(FocusEvent)>,
+    Box<dyn Fn(FocusEvent)>,
+) {
     use domius_core::signal::signal;
-    
+
     let is_focused = signal(false);
-    
+
     let is_focused_focus = is_focused.clone();
     let focus_closure: Box<dyn Fn(FocusEvent)> = Box::new(move |_event: FocusEvent| {
         is_focused_focus.set(true);
     });
-    
+
     let is_focused_blur = is_focused.clone();
     let blur_closure: Box<dyn Fn(FocusEvent)> = Box::new(move |_event: FocusEvent| {
         is_focused_blur.set(false);
     });
-    
+
     (is_focused, focus_closure, blur_closure)
 }
 
@@ -53,32 +57,32 @@ pub fn use_focus() -> (Signal<bool>, Box<dyn Fn(FocusEvent)>, Box<dyn Fn(FocusEv
 /// ```
 pub fn use_focus_auto(element: &Element) -> Signal<bool> {
     use domius_core::signal::signal;
-    
+
     let is_focused = signal(false);
-    
+
     // Focus listener
     let is_focused_focus = is_focused.clone();
     let element_focus = element.clone();
     let focus_closure = Closure::wrap(Box::new(move |_event: Event| {
         is_focused_focus.set(true);
     }) as Box<dyn FnMut(Event)>);
-    
+
     element
         .add_event_listener_with_callback("focus", focus_closure.as_ref().unchecked_ref())
         .expect("Failed to add focus listener");
     focus_closure.forget();
-    
+
     // Blur listener
     let is_focused_blur = is_focused.clone();
     let blur_closure = Closure::wrap(Box::new(move |_event: Event| {
         is_focused_blur.set(false);
     }) as Box<dyn FnMut(Event)>);
-    
+
     element
         .add_event_listener_with_callback("blur", blur_closure.as_ref().unchecked_ref())
         .expect("Failed to add blur listener");
     blur_closure.forget();
-    
+
     is_focused
 }
 
@@ -118,18 +122,18 @@ pub fn use_focus_closures() -> (
     Closure<dyn FnMut(FocusEvent)>,
 ) {
     use domius_core::signal::signal;
-    
+
     let is_focused = signal(false);
-    
+
     let is_focused_focus = is_focused.clone();
     let focus_closure = Closure::wrap(Box::new(move |_event: FocusEvent| {
         is_focused_focus.set(true);
     }) as Box<dyn FnMut(FocusEvent)>);
-    
+
     let is_focused_blur = is_focused.clone();
     let blur_closure = Closure::wrap(Box::new(move |_event: FocusEvent| {
         is_focused_blur.set(false);
     }) as Box<dyn FnMut(FocusEvent)>);
-    
+
     (is_focused, focus_closure, blur_closure)
 }

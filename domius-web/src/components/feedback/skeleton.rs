@@ -70,21 +70,15 @@ impl Skeleton {
 
         match props.variant {
             SkeletonVariant::Circular => {
-                let skeleton: HtmlElement = document
-                    .create_element("div")
-                    .unwrap()
-                    .dyn_into()
-                    .unwrap();
+                let skeleton: HtmlElement =
+                    document.create_element("div").unwrap().dyn_into().unwrap();
 
                 let mut classes = vec![
                     "domius-skeleton".to_string(),
                     "domius-skeleton-circular".to_string(),
                 ];
                 if props.animation != SkeletonAnimation::None {
-                    classes.push(format!(
-                        "domius-skeleton-{:?}",
-                        props.animation
-                    ).to_lowercase());
+                    classes.push(format!("domius-skeleton-{:?}", props.animation).to_lowercase());
                 }
                 if let Some(class) = &props.class {
                     classes.push(class.clone());
@@ -93,16 +87,15 @@ impl Skeleton {
 
                 // Set size
                 let size = props.height.unwrap_or_else(|| "40px".to_string());
-                skeleton.set_attribute("style", &format!("width: {}; height: {};", size, size)).unwrap();
+                skeleton
+                    .set_attribute("style", &format!("width: {}; height: {};", size, size))
+                    .unwrap();
 
                 skeleton.into()
             }
             SkeletonVariant::Rectangular | SkeletonVariant::Rounded => {
-                let skeleton: HtmlElement = document
-                    .create_element("div")
-                    .unwrap()
-                    .dyn_into()
-                    .unwrap();
+                let skeleton: HtmlElement =
+                    document.create_element("div").unwrap().dyn_into().unwrap();
 
                 let mut classes = vec![
                     "domius-skeleton".to_string(),
@@ -113,10 +106,7 @@ impl Skeleton {
                     },
                 ];
                 if props.animation != SkeletonAnimation::None {
-                    classes.push(format!(
-                        "domius-skeleton-{:?}",
-                        props.animation
-                    ).to_lowercase());
+                    classes.push(format!("domius-skeleton-{:?}", props.animation).to_lowercase());
                 }
                 if let Some(class) = &props.class {
                     classes.push(class.clone());
@@ -138,30 +128,24 @@ impl Skeleton {
                 skeleton.into()
             }
             SkeletonVariant::Text => {
-                let container: HtmlElement = document
-                    .create_element("div")
-                    .unwrap()
-                    .dyn_into()
+                let container: HtmlElement =
+                    document.create_element("div").unwrap().dyn_into().unwrap();
+                container
+                    .set_attribute("class", "domius-skeleton-text")
                     .unwrap();
-                container.set_attribute("class", "domius-skeleton-text").unwrap();
 
                 let lines = props.lines.unwrap_or(1);
                 for i in 0..lines {
-                    let line: HtmlElement = document
-                        .create_element("div")
-                        .unwrap()
-                        .dyn_into()
-                        .unwrap();
+                    let line: HtmlElement =
+                        document.create_element("div").unwrap().dyn_into().unwrap();
 
                     let mut classes = vec![
                         "domius-skeleton".to_string(),
                         "domius-skeleton-text-line".to_string(),
                     ];
                     if props.animation != SkeletonAnimation::None {
-                        classes.push(format!(
-                            "domius-skeleton-{:?}",
-                            props.animation
-                        ).to_lowercase());
+                        classes
+                            .push(format!("domius-skeleton-{:?}", props.animation).to_lowercase());
                     }
                     line.set_attribute("class", &classes.join(" ")).unwrap();
 

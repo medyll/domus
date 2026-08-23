@@ -14,7 +14,10 @@ pub struct ScaffoldFile {
 
 impl ScaffoldFile {
     fn new(path: impl Into<String>, content: impl Into<String>) -> Self {
-        Self { path: path.into(), content: content.into() }
+        Self {
+            path: path.into(),
+            content: content.into(),
+        }
     }
 }
 
@@ -164,10 +167,7 @@ impl DomiusComponent for {pascal} {{
         ),
         ScaffoldFile::new(
             format!("src/components/{}/style.css", snake),
-            format!(
-                "/* Styles for {} component */\n.{} {{\n}}\n",
-                pascal, snake
-            ),
+            format!("/* Styles for {} component */\n.{} {{\n}}\n", pascal, snake),
         ),
     ]
 }
@@ -342,14 +342,20 @@ mod tests {
     #[test]
     fn test_new_project_cargo_toml_has_correct_name() {
         let files = new_project("todo-app");
-        let cargo = files.iter().find(|f| f.path.ends_with("Cargo.toml")).unwrap();
+        let cargo = files
+            .iter()
+            .find(|f| f.path.ends_with("Cargo.toml"))
+            .unwrap();
         assert!(cargo.content.contains("name = \"todo_app\""));
     }
 
     #[test]
     fn test_new_project_index_html_has_app_div() {
         let files = new_project("hello");
-        let html = files.iter().find(|f| f.path.ends_with("index.html")).unwrap();
+        let html = files
+            .iter()
+            .find(|f| f.path.ends_with("index.html"))
+            .unwrap();
         assert!(html.content.contains(r#"<div id="app">"#));
     }
 
@@ -415,7 +421,10 @@ mod tests {
     #[test]
     fn test_new_page_controller_has_setup_fn() {
         let files = new_page("Settings");
-        let ctrl = files.iter().find(|f| f.path.ends_with("controller.rs")).unwrap();
+        let ctrl = files
+            .iter()
+            .find(|f| f.path.ends_with("controller.rs"))
+            .unwrap();
         assert!(ctrl.content.contains("pub fn setup()"));
     }
 

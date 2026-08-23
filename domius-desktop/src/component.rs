@@ -2,7 +2,7 @@
 //!
 //! Components are rendered as Tauri windows with webview content.
 
-use domius_core::{ScopeId, create_scope, dispose_scope};
+use domius_core::{create_scope, dispose_scope, ScopeId};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -128,7 +128,8 @@ mod tests {
 
     #[test]
     fn build_config_returns_values() {
-        let (scope, label, title, size) = build_window_config::<TestComponent>(TestProps { value: 10 });
+        let (scope, label, title, size) =
+            build_window_config::<TestComponent>(TestProps { value: 10 });
         assert_eq!(title, "Test: 10");
         assert!(label.starts_with("domus_window_"));
         assert_eq!(size, (800, 600));

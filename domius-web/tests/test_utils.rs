@@ -54,21 +54,25 @@ pub fn remove_element(element: &Element) {
 pub fn create_test_container(id: &str) -> HtmlElement {
     let container = create_div();
     container.set_id(id);
-    
+
     // Append to body
     let body = document()
         .query_selector("body")
         .ok()
         .flatten()
         .unwrap_or_else(|| {
-            document().create_element("body").unwrap().dyn_into().unwrap()
+            document()
+                .create_element("body")
+                .unwrap()
+                .dyn_into()
+                .unwrap()
         });
-    
+
     body.dyn_ref::<Element>()
         .unwrap()
         .append_child(container.dyn_ref::<Element>().unwrap())
         .expect("failed to append test container");
-    
+
     container
 }
 
@@ -89,7 +93,7 @@ impl TestContainerGuard {
         let _ = create_test_container(id);
         Self { id: id.to_string() }
     }
-    
+
     pub fn element(&self) -> Option<Element> {
         get_element_by_id(&self.id)
     }
@@ -111,7 +115,7 @@ where
         .performance()
         .expect("performance API is unavailable");
     let start = performance.now();
-    
+
     while !condition() {
         if performance.now() - start > timeout_ms as f64 {
             return false;
@@ -123,7 +127,7 @@ where
         .await
         .expect("microtask should resolve");
     }
-    
+
     true
 }
 
@@ -135,7 +139,7 @@ pub fn simulate_click(element: &Element) {
 
     let event = web_sys::MouseEvent::new_with_mouse_event_init_dict("click", &event_init)
         .expect("failed to create click event");
-    
+
     element.dispatch_event(&event).ok();
 }
 
@@ -145,12 +149,10 @@ pub fn simulate_key_press(element: &Element, key: &str) {
     event_init.set_key(key);
     event_init.set_bubbles(true);
     event_init.set_cancelable(true);
-    
-    let event = web_sys::KeyboardEvent::new_with_keyboard_event_init_dict(
-        "keydown",
-        &event_init,
-    ).expect("failed to create keyboard event");
-    
+
+    let event = web_sys::KeyboardEvent::new_with_keyboard_event_init_dict("keydown", &event_init)
+        .expect("failed to create keyboard event");
+
     element.dispatch_event(&event).ok();
 }
 

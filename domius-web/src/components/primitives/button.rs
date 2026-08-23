@@ -170,7 +170,9 @@ impl Button {
         button.set_disabled(props.disabled || props.loading);
 
         let text = if props.loading {
-            props.loading_text.unwrap_or_else(|| "Loading...".to_string())
+            props
+                .loading_text
+                .unwrap_or_else(|| "Loading...".to_string())
         } else {
             [props.left_icon, Some(props.children), props.right_icon]
                 .into_iter()

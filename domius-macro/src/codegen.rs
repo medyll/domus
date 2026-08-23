@@ -47,7 +47,11 @@ pub fn generate_static(node: &RsxNode) -> TokenStream {
 /// `parent_var`: if Some, dynamic children append themselves to it directly.
 fn gen_node(node: &RsxNode, parent_var: Option<&Ident>) -> TokenStream {
     match node {
-        RsxNode::Element { tag, attrs, children } => gen_element(tag, attrs, children),
+        RsxNode::Element {
+            tag,
+            attrs,
+            children,
+        } => gen_element(tag, attrs, children),
         RsxNode::Text(content) => {
             let text = content.trim_matches('"');
             quote! {

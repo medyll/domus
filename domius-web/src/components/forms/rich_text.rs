@@ -20,7 +20,11 @@ impl Default for RichTextEditorProps {
             value: domius_core::signal::signal(String::new()),
             placeholder: None,
             disabled: false,
-            toolbar_options: vec!["bold".to_string(), "italic".to_string(), "underline".to_string()],
+            toolbar_options: vec![
+                "bold".to_string(),
+                "italic".to_string(),
+                "underline".to_string(),
+            ],
             height: None,
             on_change: None,
             class: None,

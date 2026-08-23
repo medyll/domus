@@ -54,9 +54,9 @@ pub struct QRCodeProps {
 /// ```
 pub fn qrcode(props: QRCodeProps) -> Element {
     let document = web_sys::window().unwrap().document().unwrap();
-    
+
     let container: Element = document.create_element("div").unwrap();
-    
+
     let mut classes = String::from("qrcode");
     if let Some(class) = &props.class {
         classes.push_str(" ");
@@ -70,12 +70,17 @@ pub fn qrcode(props: QRCodeProps) -> Element {
 
     // Store value as data attribute for potential JS generation
     container.set_attribute("data-value", &props.value).ok();
-    container.set_attribute("data-error-level", &match props.error_level {
-        QRCodeErrorLevel::Low => "L",
-        QRCodeErrorLevel::Medium => "M",
-        QRCodeErrorLevel::Quartile => "Q",
-        QRCodeErrorLevel::High => "H",
-    }).ok();
+    container
+        .set_attribute(
+            "data-error-level",
+            &match props.error_level {
+                QRCodeErrorLevel::Low => "L",
+                QRCodeErrorLevel::Medium => "M",
+                QRCodeErrorLevel::Quartile => "Q",
+                QRCodeErrorLevel::High => "H",
+            },
+        )
+        .ok();
 
     // Placeholder QR code pattern (for demo purposes)
     // In production, use a proper QR code generation library
@@ -86,7 +91,9 @@ pub fn qrcode(props: QRCodeProps) -> Element {
     container.append_child(&canvas).unwrap();
 
     // Note for developers
-    web_sys::console::warn_1(&"QRCode: For production, integrate with qrcode crate for proper generation".into());
+    web_sys::console::warn_1(
+        &"QRCode: For production, integrate with qrcode crate for proper generation".into(),
+    );
 
     container
 }

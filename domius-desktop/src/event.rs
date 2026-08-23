@@ -56,10 +56,7 @@ impl Default for EventBridge {
 /// Create a signal-based event listener.
 ///
 /// Returns a signal that updates when the event fires.
-pub fn use_event_signal<T: Clone + 'static>(
-    _event_name: &str,
-    initial: T,
-) -> Signal<T> {
+pub fn use_event_signal<T: Clone + 'static>(_event_name: &str, initial: T) -> Signal<T> {
     // TODO: Implement proper event subscription
     // For now, return a simple signal
     signal(initial)

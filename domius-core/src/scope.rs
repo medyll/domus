@@ -43,7 +43,11 @@ thread_local! {
 /// Creates a new scope as a child of the given parent scope.
 pub fn create_scope(parent: Option<ScopeId>) -> ScopeId {
     let id = ScopeId(NEXT_SCOPE_ID.with(|c| c.fetch_add(1, Ordering::Relaxed)));
-    let scope = Scope { id, effects: Vec::new(), parent };
+    let scope = Scope {
+        id,
+        effects: Vec::new(),
+        parent,
+    };
     SCOPES.with(|scopes| scopes.borrow_mut().insert(id, scope));
     id
 }
@@ -203,13 +207,15 @@ mod tests {
     fn stability_under_load() {
         // Test that the system remains stable under many signals and effects.
         // Create 50 signals and 50 effects, verify execution counts.
+        use crate::effect::create_effect as crate_effect;
         use std::cell::RefCell;
         use std::rc::Rc;
-        use crate::effect::create_effect as crate_effect;
 
         let num_signals = 50;
         let signals = (0..num_signals).map(|_| signal(0)).collect::<Vec<_>>();
-        let execution_counts = (0..num_signals).map(|_| Rc::new(RefCell::new(0))).collect::<Vec<_>>();
+        let execution_counts = (0..num_signals)
+            .map(|_| Rc::new(RefCell::new(0)))
+            .collect::<Vec<_>>();
 
         // Create effects that read their corresponding signal
         let _effects = signals

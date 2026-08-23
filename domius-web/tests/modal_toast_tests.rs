@@ -4,9 +4,9 @@
 
 mod test_utils;
 
+use domius_core::signal::signal;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
-use domius_core::signal::signal;
 
 wasm_bindgen_test_configure!(run_in_browser);
 
@@ -18,9 +18,9 @@ mod modal_tests {
     #[wasm_bindgen_test]
     fn test_modal_creates_backdrop() {
         let _guard = TestContainerGuard::new("test-modal");
-        
+
         let open = signal(true);
-        
+
         let props = ModalProps {
             open: open.clone(),
             title: Some("Test Modal".to_string()),
@@ -36,19 +36,22 @@ mod modal_tests {
             on_confirm: None,
             class: None,
         };
-        
+
         let element = Modal::create(props);
-        
+
         // Modal should have backdrop class
-        assert!(has_class(element.dyn_ref().unwrap(), "domius-modal-backdrop"));
+        assert!(has_class(
+            element.dyn_ref().unwrap(),
+            "domius-modal-backdrop"
+        ));
     }
 
     #[wasm_bindgen_test]
     fn test_modal_has_title() {
         let _guard = TestContainerGuard::new("test-modal-title");
-        
+
         let open = signal(true);
-        
+
         let props = ModalProps {
             open: open.clone(),
             title: Some("Important Notice".to_string()),
@@ -64,9 +67,9 @@ mod modal_tests {
             on_confirm: None,
             class: None,
         };
-        
+
         let element = Modal::create(props);
-        
+
         // Check that title text is present
         let text = get_text_content(element.dyn_ref().unwrap());
         assert!(text.contains("Important Notice"));
@@ -75,7 +78,7 @@ mod modal_tests {
     #[wasm_bindgen_test]
     fn test_modal_sizes() {
         let _guard = TestContainerGuard::new("test-modal-sizes");
-        
+
         let sizes = [
             ModalSize::Sm,
             ModalSize::Md,
@@ -83,7 +86,7 @@ mod modal_tests {
             ModalSize::Xl,
             ModalSize::Full,
         ];
-        
+
         let size_classes = [
             "domius-modal-sm",
             "domius-modal-md",
@@ -91,10 +94,10 @@ mod modal_tests {
             "domius-modal-xl",
             "domius-modal-full",
         ];
-        
+
         for (size, expected_class) in sizes.iter().zip(size_classes.iter()) {
             let open = signal(true);
-            
+
             let props = ModalProps {
                 open: open.clone(),
                 title: None,
@@ -110,11 +113,15 @@ mod modal_tests {
                 on_confirm: None,
                 class: None,
             };
-            
+
             let element = Modal::create(props);
-            
+
             // Find the modal element inside backdrop
-            let modal = element.query_selector(".domius-modal").ok().flatten().unwrap();
+            let modal = element
+                .query_selector(".domius-modal")
+                .ok()
+                .flatten()
+                .unwrap();
             assert!(has_class(modal.dyn_ref().unwrap(), expected_class));
         }
     }
@@ -122,12 +129,12 @@ mod modal_tests {
 
 mod toast_tests {
     use super::*;
-    use domius_web::components::{ToastManager, ToastVariant, ToastData};
+    use domius_web::components::{ToastData, ToastManager, ToastVariant};
 
     #[wasm_bindgen_test]
     fn test_toast_manager_creation() {
         let manager = ToastManager::new();
-        
+
         // Initially no toasts
         assert!(manager.toasts.get().is_empty());
     }
@@ -135,7 +142,7 @@ mod toast_tests {
     #[wasm_bindgen_test]
     fn test_toast_manager_add_toast() {
         let manager = ToastManager::new();
-        
+
         manager.add(ToastData {
             id: "test-1".to_string(),
             message: "Test message".to_string(),
@@ -144,7 +151,7 @@ mod toast_tests {
             duration: Some(5000),
             dismissible: true,
         });
-        
+
         let toasts = manager.toasts.get();
         assert_eq!(toasts.len(), 1);
         assert_eq!(toasts[0].id, "test-1");
@@ -153,7 +160,7 @@ mod toast_tests {
     #[wasm_bindgen_test]
     fn test_toast_manager_remove_toast() {
         let manager = ToastManager::new();
-        
+
         manager.add(ToastData {
             id: "test-1".to_string(),
             message: "Test message".to_string(),
@@ -162,7 +169,7 @@ mod toast_tests {
             duration: Some(5000),
             dismissible: true,
         });
-        
+
         manager.add(ToastData {
             id: "test-2".to_string(),
             message: "Another message".to_string(),
@@ -171,11 +178,11 @@ mod toast_tests {
             duration: Some(3000),
             dismissible: true,
         });
-        
+
         assert_eq!(manager.toasts.get().len(), 2);
-        
+
         manager.remove("test-1");
-        
+
         let toasts = manager.toasts.get();
         assert_eq!(toasts.len(), 1);
         assert_eq!(toasts[0].id, "test-2");
@@ -184,9 +191,9 @@ mod toast_tests {
     #[wasm_bindgen_test]
     fn test_toast_manager_info() {
         let manager = ToastManager::new();
-        
+
         manager.info("Information message");
-        
+
         let toasts = manager.toasts.get();
         assert_eq!(toasts.len(), 1);
         assert_eq!(toasts[0].variant, ToastVariant::Info);
@@ -196,9 +203,9 @@ mod toast_tests {
     #[wasm_bindgen_test]
     fn test_toast_manager_success() {
         let manager = ToastManager::new();
-        
+
         manager.success("Operation completed!");
-        
+
         let toasts = manager.toasts.get();
         assert_eq!(toasts.len(), 1);
         assert_eq!(toasts[0].variant, ToastVariant::Success);
@@ -207,9 +214,9 @@ mod toast_tests {
     #[wasm_bindgen_test]
     fn test_toast_manager_error() {
         let manager = ToastManager::new();
-        
+
         manager.error("Something went wrong");
-        
+
         let toasts = manager.toasts.get();
         assert_eq!(toasts.len(), 1);
         assert_eq!(toasts[0].variant, ToastVariant::Error);
@@ -218,15 +225,15 @@ mod toast_tests {
     #[wasm_bindgen_test]
     fn test_toast_manager_multiple_toasts() {
         let manager = ToastManager::new();
-        
+
         manager.info("Info");
         manager.success("Success");
         manager.warning("Warning");
         manager.error("Error");
-        
+
         let toasts = manager.toasts.get();
         assert_eq!(toasts.len(), 4);
-        
+
         let variants: Vec<_> = toasts.iter().map(|t| t.variant.clone()).collect();
         assert!(variants.contains(&ToastVariant::Info));
         assert!(variants.contains(&ToastVariant::Success));
