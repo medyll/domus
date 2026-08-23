@@ -1,11 +1,13 @@
 use std::rc::Rc;
 
 use domius_web::{domus, DomiusComponent, DomiusPage};
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use web_sys::Element;
 
 use crate::components::app_navigation;
-use crate::pages::OverviewPage;
+use crate::pages::{OverviewPage, ServiceDetailPage, ServiceDetailProps};
 use crate::routes::{router, AppRoute};
 use crate::state::MonitoringContext;
 
@@ -34,7 +36,7 @@ pub fn mount() -> Result<(), JsValue> {
 fn render_path(host: &Element, path: &str) -> Result<(), JsValue> {
     host.set_text_content(None);
     let host_for_navigation = host.clone();
-    let navigate = Rc::new(move |target: String| {
+    let navigate: Rc<dyn Fn(String)> = Rc::new(move |target: String| {
         if let Some(window) = web_sys::window() {
             let _ = window
                 .history()
@@ -59,11 +61,14 @@ fn render_path(host: &Element, path: &str) -> Result<(), JsValue> {
             OverviewPage::render(&state)
         }
         AppRoute::ServiceDetail => {
-            document.set_title("Service detail | Domius");
-            placeholder(
-                "Service detail",
-                params.get("id").map(String::as_str).unwrap_or("unknown"),
-            )
+            let state = ServiceDetailPage::setup(ServiceDetailProps {
+                service_id: params
+                    .get("id")
+                    .cloned()
+                    .unwrap_or_else(|| "unknown".to_string()),
+            });
+            document.set_title(&ServiceDetailPage::title(&state));
+            ServiceDetailPage::render(&state)
         }
         AppRoute::Incidents => {
             document.set_title("Incidents | Domius");
@@ -78,8 +83,35 @@ fn render_path(host: &Element, path: &str) -> Result<(), JsValue> {
             placeholder("Page not found", "Return to /overview")
         }
     };
+    wire_route_links(&content, Rc::clone(&navigate));
     host.append_child(&content)?;
     Ok(())
+}
+
+fn wire_route_links(content: &Element, navigate: Rc<dyn Fn(String)>) {
+    let links = content
+        .query_selector_all("a[data-route]")
+        .expect("query internal route links");
+    for index in 0..links.length() {
+        let Some(link) = links
+            .item(index)
+            .and_then(|node| node.dyn_into::<Element>().ok())
+        else {
+            continue;
+        };
+        let Some(target) = link.get_attribute("href") else {
+            continue;
+        };
+        let callback = Rc::clone(&navigate);
+        let handler =
+            Closure::<dyn FnMut(web_sys::MouseEvent)>::new(move |event: web_sys::MouseEvent| {
+                event.prevent_default();
+                callback(target.clone());
+            });
+        link.add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
+            .expect("register internal route link");
+        handler.forget();
+    }
 }
 
 fn placeholder(title: &str, description: &str) -> Element {

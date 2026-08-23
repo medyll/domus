@@ -110,6 +110,25 @@ impl DomiusComponent for OverviewPage {
                 .expect("card body")
                 .append_child(&badge)
                 .expect("append service status");
+            let service_link = service_card
+                .owner_document()
+                .expect("service card document")
+                .create_element("a")
+                .expect("create service link");
+            service_link.set_class_name("btn-ghost");
+            service_link
+                .set_attribute("href", &format!("/services/{}", service.id))
+                .expect("set service link target");
+            service_link
+                .set_attribute("data-route", "")
+                .expect("mark internal service route");
+            service_link.set_text_content(Some("Open service"));
+            service_card
+                .query_selector(".card-body")
+                .expect("query card body")
+                .expect("card body")
+                .append_child(&service_link)
+                .expect("append service link");
             health
                 .append_child(&service_card)
                 .expect("append service card");
