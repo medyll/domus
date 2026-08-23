@@ -185,6 +185,7 @@ name = "domius-web"
 version = "0.1.0"
 dependencies = [
  "domius-core",
+ "domius-macro",
  "js-sys",
  "wasm-bindgen",
  "wasm-bindgen-futures",

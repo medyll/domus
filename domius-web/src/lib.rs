@@ -51,6 +51,7 @@ pub mod utils;
 
 // Re-exports from core modules
 pub use component::{mount_component, DomiusComponent, DomiusNode};
+pub use domius_macro::{domius, domus};
 pub use page::DomiusPage;
 pub use router::{RoutePattern, Router};
 

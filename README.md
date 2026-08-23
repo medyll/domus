@@ -203,8 +203,8 @@ Let's build a counter — the "Hello World" of reactive UIs.
 Create `src/components/counter/mod.rs`:
 
 ```rust
-use domius_web::component::{DomusComponent, DomusNode};
-use domius_core::signal::signal;
+use domius_core::signal::{signal, Signal};
+use domius_web::{domus, DomiusComponent, DomiusNode};
 
 // The component struct (empty — state goes in CounterState)
 pub struct Counter;
@@ -218,7 +218,6 @@ pub struct CounterProps {
 // State: internal reactive data
 pub struct CounterState {
     pub count: Signal<i32>,
-    pub set_count: WriteSignal<i32>,
 }
 ```
 
@@ -230,9 +229,9 @@ impl DomusComponent for Counter {
     type State = CounterState;
 
     fn setup(props: CounterProps) -> CounterState {
-        // Create a signal — a reactive value
-        let (count, set_count) = signal(props.initial);
-        CounterState { count, set_count }
+        CounterState {
+            count: signal(props.initial),
+        }
     }
 ```
 
@@ -240,17 +239,16 @@ impl DomusComponent for Counter {
 
 ```rust
     fn render(state: &CounterState) -> DomusNode {
+        let count = state.count.clone();
+
         domus! {
-            <div class="counter">
-                <h2>"Counter"</h2>
-                <p>"Count: " {state.count.get()}</p>
-                <button on_click={move |_| {
-                    let current = state.count.get();
-                    state.set_count.set(current + 1);
-                }}>
+            div(class: "counter") {
+                h2 { "Counter" }
+                p { "Count: " {count.get()} }
+                button(on_click: {move |_| count.set(count.get() + 1)}) {
                     "Increment"
-                </button>
-            </div>
+                }
+            }
         }
     }
 }
@@ -261,7 +259,7 @@ impl DomusComponent for Counter {
 In `src/lib.rs`:
 
 ```rust
-use domius_web::component::mount_component;
+use domius_web::mount_component;
 use crate::components::counter::{Counter, CounterProps};
 
 #[wasm_bindgen(start)]
@@ -269,14 +267,14 @@ pub fn main() {
     domius_web::init();
     
     let app = document().get_element_by_id("app").unwrap();
-    mount_component::<Counter>(&app, CounterProps { initial: 0 });
+    mount_component::<Counter>(CounterProps { initial: 0 }, &app);
 }
 ```
 
 ### What Happens
 
 1. User clicks "Increment"
-2. `set_count.set()` updates the signal
+2. `count.set()` updates the signal
 3. Domus automatically re-runs any code that read `count.get()`
 4. Only the `<p>` text node updates — nothing else re-renders
 
@@ -732,7 +730,8 @@ When a component's DOM node is removed, its effects are automatically cleaned up
 
 ```rust
 // In your component's render:
-let root = domus! { <div data-domus-scope={scope_id}>...</div> };
+let root = domus! { div { "Component contents" } };
+root.set_attribute("data-domus-scope", &scope_id.to_string())?;
 
 // When this div is removed from the DOM:
 // → MutationObserver detects removal
@@ -782,16 +781,16 @@ cargo test --workspace
 Test breakdown:
 
 ```
-domius-cli   35 tests   CSS scoper · scaffolding · naming
+domius-cli   36 tests   CSS scoper · scaffolding · naming · dependency policy
 domius-core  19 tests   signals · effects · batching · diamonds
 domius-desktop 10 tests components · events · context
-domius-macro 38 tests   RSX parsing · codegen
+domius-macro 40 tests   RSX parsing · public expansion · codegen
 domius-web   78 tests   components · router · context · lists
 ────────────────────────────────────────────────
-            180 native tests + 1 doctest passing
+            183 native tests + 1 doctest passing
 ```
 
-Run the 32 browser integration tests with:
+Run the 34 browser integration tests with:
 
 ```bash
 wasm-pack test --headless --chrome domius-web
@@ -810,7 +809,7 @@ wasm-pack test --headless --chrome domius-web
 - ✅ Diamond convergence (single execution)
 - ✅ Re-entrancy prevention
 - ✅ Glitch-free updates
-- ✅ RSX parser and code generator tests (Rust + HTML syntax)
+- ✅ Public `domus!` RSX macro with reactive text and browser-tested events
 - ✅ Component system
 - ✅ Page system with routing
 - ✅ Context API
@@ -821,7 +820,6 @@ wasm-pack test --headless --chrome domius-web
 - ✅ Platform-neutral desktop component, context, event, and scope foundations
 
 **Coming soon:**
-- [ ] Connect the public RSX macro to its code generator
 - [ ] Implement the independent desktop window and webview runtime
 - [ ] Add typed commands and secured frontend/native messaging
 - [ ] Add desktop development, build, and packaging commands

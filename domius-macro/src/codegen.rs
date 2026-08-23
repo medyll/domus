@@ -223,18 +223,15 @@ fn gen_dynamic_attr_effect(expr: &Expr, el_var: &Ident, attr_name: &str) -> Toke
     }
 }
 
-/// Generate a wasm-bindgen Closure for an event handler attribute.
-/// `on_click` → `set_onclick(MouseEvent)`, `on_input` → `set_oninput(InputEvent)`, etc.
+/// Generate a wasm-bindgen closure for an event handler attribute.
 fn gen_event_handler(handler_expr: &Expr, el_var: &Ident, attr_name: &str) -> TokenStream {
     let handler_id = next_id();
     let handler_var: Ident = format_ident!("__handler_{}", handler_id);
     let el_clone: Ident = format_ident!("{}_ec", el_var);
 
-    // Map on_X → (web_sys event type, setter method)
     let event_name = attr_name.trim_start_matches("on_");
-    let (event_type_str, setter_str) = event_type_and_setter(event_name);
+    let event_type_str = event_type(event_name);
     let event_type: proc_macro2::TokenStream = event_type_str.parse().unwrap();
-    let setter_ident: Ident = format_ident!("{}", setter_str);
 
     let idents = analyze_expr(handler_expr);
     let clone_stmts = generate_clones(&idents);
@@ -247,18 +244,20 @@ fn gen_event_handler(handler_expr: &Expr, el_var: &Ident, attr_name: &str) -> To
             let #handler_var = wasm_bindgen::closure::Closure::<dyn Fn(#event_type)>::new(
                 #cloned_handler
             );
-            #el_clone.#setter_ident(Some(
-                wasm_bindgen::JsCast::unchecked_ref(#handler_var.as_ref())
-            ));
+            #el_clone
+                .add_event_listener_with_callback(
+                    #event_name,
+                    wasm_bindgen::JsCast::unchecked_ref(#handler_var.as_ref()),
+                )
+                .expect(concat!("failed to register ", #event_name, " handler"));
             #handler_var.forget();
         }
     }
 }
 
-/// Map event name to `(web_sys type path, HtmlElement setter method)`.
-fn event_type_and_setter(event: &str) -> (String, String) {
-    let setter = format!("set_on{}", event);
-    let ty = match event {
+/// Map an event name to its web-sys event type.
+fn event_type(event: &str) -> String {
+    match event {
         "click" | "dblclick" | "mousedown" | "mouseup" | "mouseover" | "mouseout" => {
             "web_sys::MouseEvent"
         }
@@ -267,8 +266,8 @@ fn event_type_and_setter(event: &str) -> (String, String) {
         "submit" => "web_sys::SubmitEvent",
         "focus" | "blur" => "web_sys::FocusEvent",
         _ => "web_sys::Event",
-    };
-    (ty.to_string(), setter)
+    }
+    .to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -544,7 +543,8 @@ mod tests {
         .unwrap();
         let s = ts(generate(&ast));
         assert!(s.contains("Closure"));
-        assert!(s.contains("set_onclick"));
+        assert!(s.contains("add_event_listener_with_callback"));
+        assert!(s.contains("click"));
         assert!(s.contains("forget"));
     }
 
@@ -555,7 +555,8 @@ mod tests {
         })
         .unwrap();
         let s = ts(generate(&ast));
-        assert!(s.contains("set_oninput"));
+        assert!(s.contains("add_event_listener_with_callback"));
+        assert!(s.contains("input"));
         assert!(s.contains("InputEvent"));
     }
 
@@ -566,8 +567,9 @@ mod tests {
         })
         .unwrap();
         let s = ts(generate(&ast));
-        assert!(s.contains("set_onclick"));
-        assert!(s.contains("set_onmouseout"));
+        assert_eq!(s.matches("add_event_listener_with_callback").count(), 2);
+        assert!(s.contains("click"));
+        assert!(s.contains("mouseout"));
         assert_eq!(s.matches("Closure").count(), 2);
     }
 
@@ -590,6 +592,6 @@ mod tests {
         .unwrap();
         let s = ts(generate(&ast));
         assert!(!s.contains("set_attribute"));
-        assert!(s.contains("set_onclick"));
+        assert!(s.contains("add_event_listener_with_callback"));
     }
 }
