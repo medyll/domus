@@ -4,11 +4,11 @@
 //! - Reactive signals (`signal`, `create_effect`)
 //! - Counter with increment/decrement
 //! - Dynamic list add/remove
-//! - DOM construction via `web_sys`
+//! - Declarative DOM construction via `domus!`
 //! - Scoped CSS (via data-domus attribute convention)
 
 use domius_core::signal::signal;
-use domius_core::effect::create_effect;
+use domius_web::domus;
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, Element, HtmlButtonElement, HtmlInputElement};
 
@@ -25,75 +25,22 @@ fn el(tag: &str) -> Element {
 // ---------------------------------------------------------------------------
 
 fn build_counter(app: &Element) {
-    let section = el("section");
-    section.set_attribute("data-domius-scope", "counter").unwrap();
-
-    let h2 = el("h2");
-    h2.set_text_content(Some("Counter"));
-    section.append_child(&h2).unwrap();
-
     let count = signal(0i32);
-    let set_count = count.clone();
+    let section = domus! {
+        section(class: "counter") {
+            h2 { "Counter" }
+            span(id: "counter-display") { {count.get()} }
+            div(class: "btn-row") {
+                button(on_click: {move |_| count.set(count.get() - 1)}) { "−" }
+                button(on_click: {move |_| count.set(count.get() + 1)}) { "+" }
+                button(on_click: {move |_| count.set(0)}) { "Reset" }
+            }
+        }
+    };
 
-    // Display node
-    let display = el("span");
-    display.set_attribute("id", "counter-display").unwrap();
-    display.set_text_content(Some("0"));
-    section.append_child(&display).unwrap();
-
-    // Reactive update
-    {
-        let display = display.clone();
-        let count = count.clone();
-        create_effect(move || {
-            let val = count.get();
-            display.set_text_content(Some(&val.to_string()));
-        });
-    }
-
-    // Buttons
-    let row = el("div");
-    row.set_attribute("class", "btn-row").unwrap();
-
-    let dec: HtmlButtonElement = el("button").dyn_into().unwrap();
-    dec.set_text_content(Some("−"));
-    {
-        let set_count = set_count.clone();
-        let count = count.clone();
-        let cb = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
-            set_count.set(count.get() - 1);
-        }) as Box<dyn Fn(web_sys::MouseEvent)>);
-        dec.set_onclick(Some(cb.as_ref().unchecked_ref()));
-        cb.forget();
-    }
-
-    let inc: HtmlButtonElement = el("button").dyn_into().unwrap();
-    inc.set_text_content(Some("+"));
-    {
-        let set_count = set_count.clone();
-        let count = count.clone();
-        let cb = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
-            set_count.set(count.get() + 1);
-        }) as Box<dyn Fn(web_sys::MouseEvent)>);
-        inc.set_onclick(Some(cb.as_ref().unchecked_ref()));
-        cb.forget();
-    }
-
-    let reset: HtmlButtonElement = el("button").dyn_into().unwrap();
-    reset.set_text_content(Some("Reset"));
-    {
-        let set_count = set_count.clone();
-        let cb = Closure::wrap(Box::new(move |_: web_sys::MouseEvent| {
-            set_count.set(0);
-        }) as Box<dyn Fn(web_sys::MouseEvent)>);
-        reset.set_onclick(Some(cb.as_ref().unchecked_ref()));
-        cb.forget();
-    }
-
-    row.append_child(&dec).unwrap();
-    row.append_child(&inc).unwrap();
-    row.append_child(&reset).unwrap();
-    section.append_child(&row).unwrap();
+    section
+        .set_attribute("data-domius-scope", "counter")
+        .unwrap();
     app.append_child(&section).unwrap();
 }
 
