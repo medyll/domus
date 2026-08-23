@@ -1,19 +1,14 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-
 use domius_web::components::data::badge::{Badge, BadgeProps, BadgeVariant};
-use domius_web::components::data::table::{
-    Column, ColumnAlign, DataTable, DataTableProps, RowData,
-};
 use domius_web::components::data::timeline::{Timeline, TimelineEvent, TimelineProps};
 use domius_web::components::navigation::breadcrumbs::{
     BreadcrumbItem, Breadcrumbs, BreadcrumbsProps,
 };
-use domius_web::components::navigation::pagination::{Pagination, PaginationProps};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 use web_sys::Element;
 
-use crate::data::{Incident, IncidentSeverity, MonitoringData, Service, ServiceStatus};
+use crate::components::incident_history::severity_label;
+use crate::components::{incident_history, IncidentHistoryProps};
+use crate::data::{Incident, MonitoringData, Service, ServiceStatus};
 use crate::state::MonitoringContext;
 
 const INCIDENTS_PER_PAGE: usize = 5;
@@ -84,7 +79,6 @@ impl DomiusComponent for ServiceDetailPage {
                 section(class: "panel panel-bordered") {
                     h2 { "Incident history" }
                     div(id: "service-incidents") { }
-                    div(id: "service-pagination") { }
                 }
             }
         };
@@ -184,98 +178,17 @@ fn append_timeline(root: &Element, incidents: &[Incident]) {
 }
 
 fn append_incident_history(root: &Element, incidents: &[Incident]) {
-    let host = root
-        .query_selector("#service-incidents")
-        .expect("query incidents")
-        .expect("incidents host");
-    let incident_data = Rc::new(incidents.to_vec());
-    render_incident_page(&host, incident_data.as_ref(), 1);
-
-    let callback_host = host.clone();
-    let callback_data = Rc::clone(&incident_data);
-    let (pagination, _) = Pagination::create(PaginationProps {
-        total_items: incident_data.len(),
+    let history = incident_history(IncidentHistoryProps {
+        incidents: incidents.to_vec(),
         page_size: INCIDENTS_PER_PAGE,
-        on_page_change: Some(Box::new(move |page| {
-            render_incident_page(&callback_host, callback_data.as_ref(), page)
-        })),
-        ..Default::default()
-    });
-    root.query_selector("#service-pagination")
-        .expect("query pagination")
-        .expect("pagination host")
-        .append_child(&pagination)
-        .expect("append pagination");
-}
-
-fn render_incident_page(host: &Element, incidents: &[Incident], page: usize) {
-    host.set_text_content(None);
-    let start = page.saturating_sub(1) * INCIDENTS_PER_PAGE;
-    let rows = incidents
-        .iter()
-        .skip(start)
-        .take(INCIDENTS_PER_PAGE)
-        .map(incident_row)
-        .collect();
-    let table = DataTable::create(DataTableProps {
-        columns: incident_columns(),
-        data: rows,
         filterable: true,
         selectable: true,
-        ..Default::default()
     });
-    host.append_child(&table).expect("append incident table");
-}
-
-fn incident_columns() -> Vec<Column> {
-    vec![
-        column("id", "Incident", true, true, ColumnAlign::Left),
-        column("severity", "Severity", true, true, ColumnAlign::Center),
-        column("status", "Status", true, true, ColumnAlign::Center),
-        column("age", "Age", true, false, ColumnAlign::Right),
-    ]
-}
-
-fn column(
-    field: &str,
-    header: &str,
-    sortable: bool,
-    filterable: bool,
-    align: ColumnAlign,
-) -> Column {
-    Column {
-        field: field.into(),
-        header: header.into(),
-        sortable,
-        filterable,
-        width: None,
-        align,
-    }
-}
-
-fn incident_row(incident: &Incident) -> RowData {
-    HashMap::from([
-        ("id".into(), incident.id.clone()),
-        ("severity".into(), severity_label(incident.severity).into()),
-        (
-            "status".into(),
-            if incident.acknowledged {
-                "Acknowledged".into()
-            } else {
-                "Open".into()
-            },
-        ),
-        ("age".into(), format!("{} min", incident.opened_minutes_ago)),
-    ])
-}
-
-fn severity_label(severity: IncidentSeverity) -> &'static str {
-    match severity {
-        IncidentSeverity::Low => "Low",
-        IncidentSeverity::Medium => "Medium",
-        IncidentSeverity::High => "High",
-        IncidentSeverity::Critical => "Critical",
-    }
+    root.query_selector("#service-incidents")
+        .expect("query incidents")
+        .expect("incidents host")
+        .append_child(&history)
+        .expect("append incident history");
 }
 
 fn status_label(status: ServiceStatus) -> &'static str {
@@ -296,7 +209,6 @@ fn status_variant(status: ServiceStatus) -> BadgeVariant {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::data::monitoring_fixture;
 
     #[test]
@@ -308,11 +220,5 @@ mod tests {
             .filter(|incident| incident.service_id == "svc-03")
             .collect();
         assert_eq!(incidents.len(), 8);
-        let rows: Vec<_> = incidents
-            .iter()
-            .map(|incident| incident_row(incident))
-            .collect();
-        assert_eq!(rows.len(), 8);
-        assert!(rows.iter().all(|row| row.contains_key("severity")));
     }
 }
