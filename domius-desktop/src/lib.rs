@@ -1,10 +1,13 @@
-//! Desktop backend for Domus using Tauri.
+//! Independent desktop runtime foundation for Domius.
 //!
-//! This crate provides Tauri-specific implementations of:
-//! - Component system (native windows)
-//! - Automatic disposal via window events
-//! - Context API
-//! - Event handling
+//! This crate owns platform-neutral desktop application concepts:
+//! - component-backed native windows;
+//! - automatic scope disposal via window events;
+//! - shared context;
+//! - application events.
+//!
+//! Platform window and webview engines are implementation details and must not
+//! leak through this public API.
 
 #![allow(
     missing_docs,
@@ -20,7 +23,7 @@ pub mod disposal;
 pub mod event;
 
 /// Initialize the Domius desktop runtime.
-/// Call once from your Tauri setup hook.
+/// Call once from the Domius desktop application entry point.
 pub fn init() {
     disposal::init_event_listeners();
 }

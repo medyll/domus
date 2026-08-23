@@ -1,6 +1,6 @@
-//! Event handling for Tauri desktop applications.
+//! Event handling for Domius desktop applications.
 //!
-//! Bridges Rust events to Tauri commands and vice versa.
+//! Bridges native runtime events and reactive application state.
 
 use domius_core::signal::Signal;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ pub enum DesktopEvent {
 /// Event handler type.
 pub type EventHandler = Box<dyn Fn(DesktopEvent) + Send + 'static>;
 
-/// Event bridge for communicating between Rust and Tauri.
+/// In-process event bridge for desktop runtime events.
 pub struct EventBridge {
     handlers: Vec<EventHandler>,
 }

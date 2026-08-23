@@ -2,7 +2,7 @@
 name = "domius-desktop"
 version = "0.1.0"
 edition = "2021"
-description = "Tauri desktop backend for Domus UI framework"
+description = "Independent desktop runtime foundation for the Domius UI framework"
 license = "MIT"
 
 [dependencies]

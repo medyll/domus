@@ -1,7 +1,6 @@
-//! Context API for Tauri desktop applications.
+//! Context API for Domius desktop applications.
 //!
-//! Provides type-based context storage similar to the web version,
-//! but using Tauri's state management.
+//! Provides process-wide, type-based context storage for desktop windows.
 
 use std::any::TypeId;
 use std::collections::HashMap;
