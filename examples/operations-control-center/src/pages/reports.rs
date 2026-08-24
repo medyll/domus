@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
+use domius_web::components::pro::data_grid::{DataGrid, DataGridProps, GridColumn};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
 use crate::data::{Incident, IncidentSeverity, Metric, Service};
@@ -68,6 +69,11 @@ impl DomiusComponent for ReportsPage {
                     h2 { "Incident severity mix" }
                     div(id: "severity-chart") { }
                 }
+                section(class: "panel") {
+                    h2 { "Raw metric workspace" }
+                    p { "All 360 measurements in a frozen-column grid" }
+                    div(id: "metric-grid") { }
+                }
             }
         };
 
@@ -129,7 +135,53 @@ impl DomiusComponent for ReportsPage {
                 ..Default::default()
             },
         );
+        root.query_selector("#metric-grid")
+            .expect("query metric grid")
+            .expect("metric grid host")
+            .append_child(&metric_grid(&state.metrics))
+            .expect("append metric grid");
         root
+    }
+}
+
+fn metric_grid(metrics: &[Metric]) -> web_sys::Element {
+    DataGrid::create(DataGridProps {
+        columns: vec![
+            grid_column("service", "Service"),
+            grid_column("minute", "Minute"),
+            grid_column("throughput", "Requests/s"),
+            grid_column("error", "Error rate"),
+        ],
+        data: metric_rows(metrics),
+        editable: false,
+        virtualized: true,
+        frozen_rows: 1,
+        frozen_columns: 1,
+        ..Default::default()
+    })
+}
+
+fn metric_rows(metrics: &[Metric]) -> Vec<Vec<String>> {
+    metrics
+        .iter()
+        .map(|metric| {
+            vec![
+                metric.service_id.clone(),
+                metric.minute.to_string(),
+                metric.requests_per_second.to_string(),
+                format!("{:.2}%", metric.error_rate),
+            ]
+        })
+        .collect()
+}
+
+fn grid_column(field: &str, header: &str) -> GridColumn {
+    GridColumn {
+        field: field.to_string(),
+        header: header.to_string(),
+        width: None,
+        editable: false,
+        cell_renderer: None,
     }
 }
 
@@ -232,6 +284,7 @@ mod tests {
         assert_eq!(throughput.len(), 60);
         assert_eq!(errors.len(), 6);
         assert_eq!(severities.len(), 4);
+        assert_eq!(metric_rows(&data.metrics).len(), 360);
         assert_eq!(
             severities.iter().map(|point| point.value).sum::<f64>(),
             48.0
