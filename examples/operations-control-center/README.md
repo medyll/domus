@@ -164,4 +164,5 @@ Codex possède ce dossier, `domius-core`, le routeur, le contexte web, la récon
 
 Ajouter ici toute décision qui change une API publique ou déplace une fonctionnalité vers un autre exemple. Une entrée tient sur une ligne : date, décision, fichiers concernés.
 
+- 2026-08-24 : `qrcode` encode réellement sa valeur ; `QRCodeProps.svg` disparaît (la sortie est toujours du SVG) et `qrcode_matrix` expose la grille sans DOM. Ajout de `qrcode` en dépendance et de `rqrr` en dépendance de développement pour prouver le décodage — `domius-web/Cargo.toml`, `domius-web/src/components/primitives/qrcode.rs`, `domius-web/tests/qrcode_tests.rs`.
 - 2026-08-24 : `ResultProps.extra_actions: Option<String>` devient `actions: Vec<ResultAction>` et `Result::not_found` prend ses actions en argument ; le HTML brut injecté par `set_inner_html` disparaît au profit de vrais liens atteignables au clavier — `domius-web/src/components/pro/result.rs`, `domius-web/tests/result_tests.rs`.
