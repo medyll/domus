@@ -10,7 +10,7 @@ use web_sys::{Element, IntersectionObserver, IntersectionObserverEntry, Intersec
 
 pub struct InfiniteScrollProps {
     pub children: Element,
-    pub has_more: bool,
+    pub has_more: Signal<bool>,
     pub loading: Signal<bool>,
     pub threshold: usize,
     pub on_load_more: Box<dyn Fn()>,
@@ -27,7 +27,7 @@ impl Default for InfiniteScrollProps {
                 .unwrap()
                 .create_element("div")
                 .unwrap(),
-            has_more: true,
+            has_more: signal(true),
             loading: signal(false),
             threshold: 100,
             on_load_more: Box::new(|| {}),
@@ -92,69 +92,57 @@ impl InfiniteScroll {
             .set_attribute("aria-live", "polite")
             .expect("set status live region");
 
-        let load_button = props.has_more.then(|| {
-            let button = document
-                .create_element("button")
-                .expect("create load more button");
-            button.set_class_name("btn-sm");
-            button
-                .set_attribute("type", "button")
-                .expect("set load button type");
-            button.set_text_content(Some("Load more"));
-            button
-        });
-        if let Some(button) = load_button.as_ref() {
-            root.append_child(button).expect("append load button");
-        }
+        let load_button = document
+            .create_element("button")
+            .expect("create load more button");
+        load_button.set_class_name("btn-sm");
+        load_button
+            .set_attribute("type", "button")
+            .expect("set load button type");
+        load_button.set_text_content(Some("Load more"));
+        root.append_child(&load_button).expect("append load button");
         root.append_child(&status).expect("append scroll status");
 
         let callback = Rc::<dyn Fn()>::from(props.on_load_more);
         let request_loading = props.loading.clone();
+        let request_has_more = props.has_more.clone();
         let request_callback = Rc::clone(&callback);
         let request_root = root.clone();
         let request_status = status.clone();
         let request_button = load_button.clone();
         let request_load: Rc<dyn Fn()> = Rc::new(move || {
-            if !request_loading.get() {
+            if request_has_more.get() && !request_loading.get() {
                 request_loading.set(true);
-                apply_loading_state(
-                    &request_root,
-                    &request_status,
-                    request_button.as_ref(),
-                    true,
-                    true,
-                );
+                apply_loading_state(&request_root, &request_status, &request_button, true, true);
                 request_callback();
             }
         });
 
-        if let Some(button) = load_button.as_ref() {
-            let click_request = Rc::clone(&request_load);
-            let handler = Closure::<dyn FnMut(web_sys::MouseEvent)>::new(move |_| {
-                click_request();
-            });
-            button
-                .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
-                .expect("register load button");
-            handler.forget();
-        }
+        let click_request = Rc::clone(&request_load);
+        let handler = Closure::<dyn FnMut(web_sys::MouseEvent)>::new(move |_| {
+            click_request();
+        });
+        load_button
+            .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
+            .expect("register load button");
+        handler.forget();
 
-        if props.has_more {
-            observe_sentinel(&sentinel, props.threshold, Rc::clone(&request_load));
-        }
+        observe_sentinel(&sentinel, props.threshold, Rc::clone(&request_load));
 
         let effect_loading = props.loading.clone();
         let effect_root = root.clone();
         let effect_status = status.clone();
         let effect_button = load_button.clone();
+        let effect_has_more = props.has_more.clone();
         create_effect(move || {
             let loading = effect_loading.get();
+            let has_more = effect_has_more.get();
             apply_loading_state(
                 &effect_root,
                 &effect_status,
-                effect_button.as_ref(),
+                &effect_button,
                 loading,
-                props.has_more,
+                has_more,
             );
         });
 
@@ -165,7 +153,7 @@ impl InfiniteScroll {
 fn apply_loading_state(
     root: &Element,
     status: &Element,
-    button: Option<&Element>,
+    button: &Element,
     loading: bool,
     has_more: bool,
 ) {
@@ -180,7 +168,18 @@ fn apply_loading_state(
     } else {
         "All items loaded"
     }));
-    if let Some(button) = button {
+    if !has_more {
+        button
+            .set_attribute("hidden", "")
+            .expect("hide completed load button");
+        button
+            .set_attribute("disabled", "")
+            .expect("disable completed load button");
+        button
+            .set_attribute("aria-disabled", "true")
+            .expect("expose completed load button");
+    } else {
+        button.remove_attribute("hidden").expect("show load button");
         if loading {
             button
                 .set_attribute("disabled", "")

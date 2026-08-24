@@ -70,7 +70,7 @@ fn completed_reverse_feed_has_no_load_control() {
     let document = web_sys::window().unwrap().document().unwrap();
     let root = InfiniteScroll::create(InfiniteScrollProps {
         children: document.create_element("ol").unwrap(),
-        has_more: false,
+        has_more: signal(false),
         reverse: true,
         ..Default::default()
     });
@@ -79,7 +79,11 @@ fn completed_reverse_feed_has_no_load_control() {
         root.get_attribute("data-direction").as_deref(),
         Some("reverse")
     );
-    assert_eq!(root.query_selector_all("button").unwrap().length(), 0);
+    assert!(root
+        .query_selector("button")
+        .unwrap()
+        .unwrap()
+        .has_attribute("hidden"));
     assert_eq!(
         root.query_selector("[role='status']")
             .unwrap()
