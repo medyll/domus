@@ -2,6 +2,9 @@ use std::collections::BTreeMap;
 
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
+use domius_web::components::data::table::{
+    Column, ColumnAlign, DataTable, DataTableProps, RowData,
+};
 use domius_web::components::primitives::qrcode::{qrcode, QRCodeErrorLevel, QRCodeProps};
 use domius_web::components::pro::data_grid::{DataGrid, DataGridProps, GridColumn};
 use domius_web::components::pro::heatmap::{Heatmap, HeatmapCell, HeatmapColorScale, HeatmapProps};
@@ -146,6 +149,11 @@ impl DomiusComponent for ReportsPage {
                 }
                 div(id: "export-region", class: "export-region") {
                     section(class: "panel") {
+                        h2 { "Service summary table" }
+                        p { "Sortable and filterable aggregates for every service" }
+                        div(id: "metric-table") { }
+                    }
+                    section(class: "panel") {
                         h2 { "Raw metric workspace" }
                         p { "All 360 measurements in a frozen-column grid" }
                         div(id: "metric-grid") { }
@@ -240,6 +248,11 @@ impl DomiusComponent for ReportsPage {
             .expect("metric grid host")
             .append_child(&metric_grid(&state.metrics))
             .expect("append metric grid");
+        root.query_selector("#metric-table")
+            .expect("query metric table")
+            .expect("metric table host")
+            .append_child(&metric_table(&state.services, &state.metrics))
+            .expect("append metric table");
         root.query_selector("#metric-pivot")
             .expect("query metric pivot")
             .expect("metric pivot host")
@@ -489,6 +502,64 @@ fn metric_grid(metrics: &[Metric]) -> web_sys::Element {
         virtualized: true,
         frozen_rows: 1,
         frozen_columns: 1,
+        ..Default::default()
+    })
+}
+
+fn metric_table(services: &[Service], metrics: &[Metric]) -> web_sys::Element {
+    let columns = [
+        ("service", "Service", ColumnAlign::Left),
+        ("status", "Status", ColumnAlign::Left),
+        ("throughput", "Average req/s", ColumnAlign::Right),
+        ("error", "Average error", ColumnAlign::Right),
+    ]
+    .into_iter()
+    .map(|(field, header, align)| Column {
+        field: field.to_string(),
+        header: header.to_string(),
+        sortable: true,
+        filterable: matches!(field, "service" | "status"),
+        width: None,
+        align,
+    })
+    .collect();
+    let data = services
+        .iter()
+        .map(|service| {
+            let service_metrics = metrics
+                .iter()
+                .filter(|metric| metric.service_id == service.id)
+                .collect::<Vec<_>>();
+            let divisor = service_metrics.len().max(1) as f64;
+            let throughput = service_metrics
+                .iter()
+                .map(|metric| f64::from(metric.requests_per_second))
+                .sum::<f64>()
+                / divisor;
+            let error = service_metrics
+                .iter()
+                .map(|metric| metric.error_rate)
+                .sum::<f64>()
+                / divisor;
+            [
+                ("service".to_string(), service.name.clone()),
+                (
+                    "status".to_string(),
+                    status_token(service.status).to_string(),
+                ),
+                ("throughput".to_string(), format!("{throughput:.0}")),
+                ("error".to_string(), format!("{error:.2}%")),
+            ]
+            .into_iter()
+            .collect::<RowData>()
+        })
+        .collect();
+    DataTable::create(DataTableProps {
+        columns,
+        data,
+        sortable: true,
+        filterable: true,
+        class: Some("report-table".to_string()),
         ..Default::default()
     })
 }

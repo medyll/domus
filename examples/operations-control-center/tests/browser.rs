@@ -287,6 +287,7 @@ async fn every_report_view_reads_the_same_window() {
     boot("/reports").await;
 
     // 360 measurements, 6 services over 6 ten-minute windows.
+    assert_eq!(count("#metric-table tbody tr"), 6);
     assert_eq!(count("#metric-grid [role='row'], #metric-grid tr") - 1, 360);
     assert_eq!(count("#error-heatmap tbody td:not([data-empty])"), 36);
     assert_eq!(count("#correlation-scatter [data-role='marks'] circle"), 36);
