@@ -351,7 +351,7 @@ fn mark_export_region(root: &web_sys::Element) {
             gap: (260, 160),
             offset: (130, 80),
             font_size: 20,
-            font_color: "#1f2933".to_string(),
+            font_color: "var(--color-text-muted)".to_string(),
             class: Some("report-watermark".to_string()),
             ..Default::default()
         }))

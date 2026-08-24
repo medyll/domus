@@ -28,7 +28,7 @@ impl Default for WatermarkProps {
             gap: (100, 100),
             offset: (50, 50),
             font_size: 16,
-            font_color: "#000000".to_string(),
+            font_color: "var(--color-text-muted)".to_string(),
             class: None,
         }
     }
