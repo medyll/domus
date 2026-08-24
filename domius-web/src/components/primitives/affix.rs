@@ -4,6 +4,7 @@
 
 use web_sys::Element;
 
+use crate::disposal::ViewScope;
 use crate::utils::scroll::follow_scroll;
 
 /// Affix props.
@@ -80,7 +81,8 @@ pub fn affix(props: AffixProps) -> Element {
     let threshold = f64::from(props.offset_top);
     let watched = container.clone();
     let reserved = placeholder.clone();
-    follow_scroll(props.target.as_deref(), move |target| {
+    let scope = ViewScope::attach(&container);
+    let subscription = follow_scroll(props.target.as_deref(), move |target| {
         let affixed = target.offset() > threshold;
         watched
             .set_attribute("data-affixed", &affixed.to_string())
@@ -95,6 +97,9 @@ pub fn affix(props: AffixProps) -> Element {
                 .expect("release affix space");
         }
     });
+    if let Some(subscription) = subscription {
+        scope.cleanup(move || drop(subscription));
+    }
 
     container
 }

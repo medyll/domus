@@ -6,6 +6,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::Element;
 
+use crate::disposal::ViewScope;
 use crate::utils::scroll::{follow_scroll, ScrollTarget};
 
 /// One entry of the anchor list.
@@ -121,7 +122,8 @@ fn follow_current_section(container: &Element, props: &AnchorProps) {
     }
     let watched = container.clone();
     let offset = f64::from(props.offset_top);
-    follow_scroll(props.target_container.as_deref(), move |target| {
+    let scope = ViewScope::attach(container);
+    let subscription = follow_scroll(props.target_container.as_deref(), move |target| {
         let current = current_index(&hrefs, target, offset);
         let entries = watched
             .query_selector_all(".anchor-link")
@@ -150,6 +152,9 @@ fn follow_current_section(container: &Element, props: &AnchorProps) {
             }
         }
     });
+    if let Some(subscription) = subscription {
+        scope.cleanup(move || drop(subscription));
+    }
 }
 
 /// The last section whose top the reader has passed.

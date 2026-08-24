@@ -6,6 +6,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::Element;
 
+use crate::disposal::ViewScope;
 use crate::utils::scroll::{follow_scroll, ScrollTarget};
 
 /// BackTop props.
@@ -96,9 +97,13 @@ pub fn backtop(props: BackTopProps) -> Element {
 
     let threshold = f64::from(props.visibility_height);
     let watched = container.clone();
-    follow_scroll(props.target.as_deref(), move |target| {
+    let scope = ViewScope::attach(&container);
+    let subscription = follow_scroll(props.target.as_deref(), move |target| {
         set_visible(&watched, target.offset() > threshold);
     });
+    if let Some(subscription) = subscription {
+        scope.cleanup(move || drop(subscription));
+    }
 
     container
 }

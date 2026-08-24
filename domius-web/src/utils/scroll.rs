@@ -71,15 +71,13 @@ impl ScrollTarget {
 }
 
 /// Run `on_scroll` now and on every scroll of `target`.
-///
-/// The listener is leaked deliberately: it lives as long as the document, which
-/// is what a component attached to the page wants.
-pub fn follow_scroll<F: FnMut(&ScrollTarget) + 'static>(selector: Option<&str>, mut on_scroll: F) {
+pub fn follow_scroll<F: FnMut(&ScrollTarget) + 'static>(
+    selector: Option<&str>,
+    mut on_scroll: F,
+) -> Option<ScrollSubscription> {
     let target = ScrollTarget::resolve(selector);
     on_scroll(&target);
-    let Some(events) = target.events() else {
-        return;
-    };
+    let events = target.events()?;
     let owned = selector.map(str::to_string);
     let handler = Closure::<dyn FnMut(web_sys::Event)>::new(move |_| {
         on_scroll(&ScrollTarget::resolve(owned.as_deref()));
@@ -87,5 +85,19 @@ pub fn follow_scroll<F: FnMut(&ScrollTarget) + 'static>(selector: Option<&str>, 
     events
         .add_event_listener_with_callback("scroll", handler.as_ref().unchecked_ref())
         .expect("listen for scroll");
-    handler.forget();
+    Some(ScrollSubscription { events, handler })
+}
+
+/// Owns one scroll listener and removes it when its view is disposed.
+pub struct ScrollSubscription {
+    events: EventTarget,
+    handler: Closure<dyn FnMut(web_sys::Event)>,
+}
+
+impl Drop for ScrollSubscription {
+    fn drop(&mut self) {
+        self.events
+            .remove_event_listener_with_callback("scroll", self.handler.as_ref().unchecked_ref())
+            .expect("remove scroll listener");
+    }
 }

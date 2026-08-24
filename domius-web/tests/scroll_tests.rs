@@ -130,6 +130,43 @@ fn backtop_returns_the_reader_to_the_top() {
 }
 
 #[wasm_bindgen_test]
+async fn removing_a_scroll_component_detaches_its_listener() {
+    domius_web::init();
+    let page = Page::new("backtop-disposal");
+    page.add_section("disposal-one", "one");
+    page.add_section("disposal-two", "two");
+    let control = backtop(BackTopProps {
+        visibility_height: 100,
+        target: page.selector(),
+        ..Default::default()
+    });
+    page.container
+        .append_child(&control)
+        .expect("append backtop");
+    page.scroll_to(150);
+    assert_eq!(
+        control.get_attribute("data-visible").as_deref(),
+        Some("true")
+    );
+
+    control.remove();
+    for _ in 0..2 {
+        wasm_bindgen_futures::JsFuture::from(js_sys::Promise::resolve(
+            &wasm_bindgen::JsValue::UNDEFINED,
+        ))
+        .await
+        .expect("let the disposal observer run");
+    }
+    page.scroll_to(0);
+
+    assert_eq!(
+        control.get_attribute("data-visible").as_deref(),
+        Some("true"),
+        "a detached component must no longer receive global scroll events"
+    );
+}
+
+#[wasm_bindgen_test]
 fn affix_takes_hold_past_its_offset_and_reserves_the_space() {
     let page = Page::new("affix-page");
     page.add_section("affix-one", "one");
