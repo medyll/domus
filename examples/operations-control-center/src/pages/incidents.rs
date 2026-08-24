@@ -1,9 +1,15 @@
+use domius_core::Signal;
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
+use domius_web::components::feedback::toast::{ToastContainer, ToastManager};
+use domius_web::context::provide_context;
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
-use crate::components::{incident_feed, incident_history, IncidentFeedProps, IncidentHistoryProps};
-use crate::data::{Incident, IncidentSeverity};
-use crate::state::MonitoringContext;
+use crate::components::{
+    incident_feed, incident_history, incident_queue, IncidentFeedProps, IncidentHistoryProps,
+    IncidentQueueProps,
+};
+use crate::data::{Incident, IncidentSeverity, MonitoringData, Service};
+use crate::state::{FilterContext, MonitoringContext};
 
 const INCIDENTS_PER_PAGE: usize = 10;
 
@@ -11,6 +17,9 @@ pub struct IncidentsPage;
 
 pub struct IncidentsState {
     incidents: Vec<Incident>,
+    services: Vec<Service>,
+    data: Signal<MonitoringData>,
+    filters: FilterContext,
     open_count: usize,
     critical_count: usize,
     acknowledged_count: usize,
@@ -21,11 +30,19 @@ impl DomiusComponent for IncidentsPage {
     type State = IncidentsState;
 
     fn setup(_: Self::Props) -> Self::State {
-        let incidents = MonitoringContext::current()
+        let data = MonitoringContext::current()
             .expect("monitoring context is missing")
-            .data
-            .get()
-            .incidents;
+            .data;
+        // The filters outlive a single visit, so reuse the shared ones when
+        // they exist and publish them the first time we need them.
+        let filters = FilterContext::current().unwrap_or_else(|| {
+            let filters = FilterContext::over(data.clone());
+            filters.clone().provide();
+            filters
+        });
+        let window = data.get();
+        let services = window.services;
+        let incidents = window.incidents;
         let open_count = incidents
             .iter()
             .filter(|incident| !incident.acknowledged)
@@ -37,6 +54,9 @@ impl DomiusComponent for IncidentsPage {
         let acknowledged_count = incidents.len() - open_count;
         IncidentsState {
             incidents,
+            services,
+            data,
+            filters,
             open_count,
             critical_count,
             acknowledged_count,
@@ -51,6 +71,13 @@ impl DomiusComponent for IncidentsPage {
                     p { "Triage the deterministic production queue" }
                 }
                 section(id: "incident-statistics") { }
+                section(class: "panel") {
+                    header(class: "section-header") {
+                        h2 { "Working queue" }
+                        p { "Filter, reorder and acknowledge without losing your place" }
+                    }
+                    div(id: "incident-queue") { }
+                }
                 section(class: "panel") {
                     header(class: "section-header") {
                         h2 { "Progressive incident feed" }
@@ -90,6 +117,22 @@ impl DomiusComponent for IncidentsPage {
             state.acknowledged_count,
             "Already owned by an operator",
         );
+
+        let toasts = ToastManager::new();
+        provide_context(toasts.clone());
+        let queue = incident_queue(IncidentQueueProps {
+            filters: state.filters.clone(),
+            data: state.data.clone(),
+            services: state.services.clone(),
+            toasts,
+        });
+        root.query_selector("#incident-queue")
+            .expect("query incident queue")
+            .expect("incident queue host")
+            .append_child(&queue)
+            .expect("append incident queue");
+        root.append_child(&ToastContainer::create())
+            .expect("append toast container");
 
         let feed = incident_feed(IncidentFeedProps {
             incidents: state.incidents.clone(),

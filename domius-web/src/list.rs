@@ -1,8 +1,7 @@
 //! Keyed list reconciliation for efficient reactive list rendering.
 //!
 //! The `diff_keys` function and `ListPatch` enum are pure Rust and fully
-//! testable without WASM.  The `For<T>` struct wires them up to real DOM
-//! and is only compiled on the WASM target.
+//! testable without WASM.  `KeyedList` wires them up to real DOM nodes.
 
 use std::collections::HashMap;
 
@@ -92,14 +91,12 @@ pub fn diff_keys(old_keys: &[String], new_keys: &[String]) -> ListPatch {
 /// let mut list = KeyedList::mount(host);
 /// list.reconcile(&incidents, |incident| incident.id.clone(), render_incident);
 /// ```
-#[cfg(target_arch = "wasm32")]
 pub struct KeyedList {
     host: web_sys::Element,
     keys: Vec<String>,
     nodes: Vec<web_sys::Element>,
 }
 
-#[cfg(target_arch = "wasm32")]
 impl KeyedList {
     /// Take over `host`, whose children this list will own from now on.
     pub fn mount(host: web_sys::Element) -> Self {
