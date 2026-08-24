@@ -1,8 +1,12 @@
 use domius_web::components::data::badge::{Badge, BadgeProps, BadgeVariant};
 use domius_web::components::data::timeline::{Timeline, TimelineEvent, TimelineProps};
+use domius_web::components::feedback::tooltip::{Tooltip, TooltipPosition, TooltipProps};
+use domius_web::components::navigation::anchor::{anchor, AnchorLink, AnchorProps};
 use domius_web::components::navigation::breadcrumbs::{
     BreadcrumbItem, Breadcrumbs, BreadcrumbsProps,
 };
+use domius_web::components::primitives::affix::{affix, AffixProps};
+use domius_web::components::primitives::backtop::{backtop, BackTopProps};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 use web_sys::Element;
 
@@ -69,26 +73,100 @@ impl DomiusComponent for ServiceDetailPage {
                 section(id: "service-breadcrumbs") { }
                 header(class: "section-header") {
                     h1 { {service_name} }
-                    p { {service_summary} }
+                    p(id: "service-summary") { }
                     span(id: "service-status") { }
                 }
-                section(class: "panel panel-bordered") {
-                    h2 { "Recent incident timeline" }
+                div(id: "service-contents") { }
+                section(id: "service-timeline-section", class: "panel panel-bordered") {
+                    h2(tabindex: "-1") { "Recent incident timeline" }
                     div(id: "service-timeline") { }
                 }
-                section(class: "panel panel-bordered") {
-                    h2 { "Incident history" }
+                section(id: "service-incidents-section", class: "panel panel-bordered") {
+                    h2(tabindex: "-1") { "Incident history" }
                     div(id: "service-incidents") { }
                 }
+                div(id: "service-backtop") { }
             }
         };
 
         append_breadcrumbs(&root, service);
         append_status(&root, service.status);
+        append_summary(&root, &service_summary, service);
+        append_contents(&root);
         append_timeline(&root, &state.incidents);
         append_incident_history(&root, &state.incidents);
+        append_backtop(&root);
         root
     }
+}
+
+/// A table of contents that sticks once the reader scrolls past the header.
+fn append_contents(root: &Element) {
+    let sticky = affix(AffixProps {
+        offset_top: 96,
+        class: Some("service-contents".to_string()),
+        ..Default::default()
+    });
+    sticky
+        .append_child(&anchor(AnchorProps {
+            links: vec![
+                AnchorLink {
+                    href: "#service-timeline-section".to_string(),
+                    title: "Timeline".to_string(),
+                },
+                AnchorLink {
+                    href: "#service-incidents-section".to_string(),
+                    title: "Incident history".to_string(),
+                },
+            ],
+            offset_top: 96,
+            show_boundary: true,
+            class: Some("service-anchor".to_string()),
+            ..Default::default()
+        }))
+        .expect("append service anchor");
+    root.query_selector("#service-contents")
+        .expect("query service contents")
+        .expect("service contents host")
+        .append_child(&sticky)
+        .expect("append service contents");
+}
+
+/// The summary abbreviates two figures, so spell them out within reach.
+fn append_summary(root: &Element, summary: &str, service: &Service) {
+    let host = root
+        .query_selector("#service-summary")
+        .expect("query service summary")
+        .expect("service summary host");
+    let value = host
+        .owner_document()
+        .expect("service summary document")
+        .create_element("span")
+        .expect("create service summary value");
+    value.set_text_content(Some(summary));
+    host.append_child(&Tooltip::create(TooltipProps {
+        content: format!(
+            "Median response time {} milliseconds, {:.2} percent of requests failing",
+            service.latency_ms, service.error_rate
+        ),
+        position: TooltipPosition::Bottom,
+        children: value,
+        class: Some("service-summary".to_string()),
+        ..Default::default()
+    }))
+    .expect("append service summary tooltip");
+}
+
+fn append_backtop(root: &Element) {
+    root.query_selector("#service-backtop")
+        .expect("query service backtop")
+        .expect("service backtop host")
+        .append_child(&backtop(BackTopProps {
+            visibility_height: 320,
+            class: Some("service-backtop".to_string()),
+            ..Default::default()
+        }))
+        .expect("append service backtop");
 }
 
 impl DomiusPage for ServiceDetailPage {
