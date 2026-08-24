@@ -79,6 +79,123 @@ pub fn diff_keys(old_keys: &[String], new_keys: &[String]) -> ListPatch {
 }
 
 // ---------------------------------------------------------------------------
+// KeyedList — ListPatch applied to real DOM nodes
+// ---------------------------------------------------------------------------
+
+/// A list of DOM nodes addressed by key rather than by position.
+///
+/// Reconciling against a new sequence reuses the node already standing for a
+/// key, so reordering or removing items never rebuilds the survivors: their
+/// focus, scroll position, and any state their listeners hold stay intact.
+///
+/// ```ignore
+/// let mut list = KeyedList::mount(host);
+/// list.reconcile(&incidents, |incident| incident.id.clone(), render_incident);
+/// ```
+#[cfg(target_arch = "wasm32")]
+pub struct KeyedList {
+    host: web_sys::Element,
+    keys: Vec<String>,
+    nodes: Vec<web_sys::Element>,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl KeyedList {
+    /// Take over `host`, whose children this list will own from now on.
+    pub fn mount(host: web_sys::Element) -> Self {
+        host.set_text_content(None);
+        Self {
+            host,
+            keys: Vec::new(),
+            nodes: Vec::new(),
+        }
+    }
+
+    /// Keys currently rendered, in document order.
+    pub fn keys(&self) -> &[String] {
+        &self.keys
+    }
+
+    /// Number of rendered items.
+    pub fn len(&self) -> usize {
+        self.keys.len()
+    }
+
+    /// Whether the list currently renders nothing.
+    pub fn is_empty(&self) -> bool {
+        self.keys.is_empty()
+    }
+
+    /// The node standing for `key`, if the list holds one.
+    pub fn node(&self, key: &str) -> Option<&web_sys::Element> {
+        self.keys
+            .iter()
+            .position(|candidate| candidate == key)
+            .map(|index| &self.nodes[index])
+    }
+
+    /// Bring the list in line with `items`, building nodes only for new keys.
+    pub fn reconcile<T, K, R>(&mut self, items: &[T], key: K, render: R) -> ListPatch
+    where
+        K: Fn(&T) -> String,
+        R: FnMut(&T) -> web_sys::Element,
+    {
+        self.reconcile_with(items, key, render, |_, _| {})
+    }
+
+    /// Reconcile, and let `update` refresh the nodes that were kept.
+    ///
+    /// Returns the patch that was applied, so callers can report what moved.
+    pub fn reconcile_with<T, K, R, U>(
+        &mut self,
+        items: &[T],
+        key: K,
+        mut render: R,
+        mut update: U,
+    ) -> ListPatch
+    where
+        K: Fn(&T) -> String,
+        R: FnMut(&T) -> web_sys::Element,
+        U: FnMut(&web_sys::Element, &T),
+    {
+        let new_keys: Vec<String> = items.iter().map(&key).collect();
+        let patch = diff_keys(&self.keys, &new_keys);
+
+        for index in &patch.removes {
+            let node = &self.nodes[*index];
+            if let Some(parent) = node.parent_node() {
+                parent.remove_child(node).expect("remove keyed list node");
+            }
+        }
+
+        // A key repeated in one sequence cannot share a node with itself, so
+        // only the first occurrence keeps the old node.
+        let mut claimed = std::collections::HashSet::new();
+        let mut nodes = Vec::with_capacity(items.len());
+        for (position, item) in items.iter().enumerate() {
+            let node = match patch.ops[position] {
+                DiffOp::Keep(old_index) if claimed.insert(old_index) => {
+                    let node = self.nodes[old_index].clone();
+                    update(&node, item);
+                    node
+                }
+                _ => render(item),
+            };
+            nodes.push(node);
+        }
+
+        // Appending an attached node moves it, which is what reordering needs.
+        for node in &nodes {
+            self.host.append_child(node).expect("place keyed list node");
+        }
+
+        self.keys = new_keys;
+        self.nodes = nodes;
+        patch
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
