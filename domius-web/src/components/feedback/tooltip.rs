@@ -1,6 +1,7 @@
 //! Tooltip component - Contextual hints on hover and focus.
 
 use std::cell::Cell;
+use std::rc::Rc;
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
@@ -127,14 +128,39 @@ impl Tooltip {
                 .expect("make tooltip trigger focusable");
         }
         wrapper.append_child(&hint).expect("append tooltip hint");
+        let pending = Rc::new(Cell::new(None));
 
         // Hover waits, because a pointer crossing a control did not ask for a
         // hint; focus does not, because it did.
-        listen(&wrapper, "mouseenter", &hint, Visibility::Show(props.delay));
-        listen(&wrapper, "mouseleave", &hint, Visibility::Hide);
-        listen(&wrapper, "focusin", &hint, Visibility::Show(0));
-        listen(&wrapper, "focusout", &hint, Visibility::Hide);
-        listen_for_escape(&wrapper, &hint);
+        listen(
+            &wrapper,
+            "mouseenter",
+            &hint,
+            Visibility::Show(props.delay),
+            Rc::clone(&pending),
+        );
+        listen(
+            &wrapper,
+            "mouseleave",
+            &hint,
+            Visibility::Hide,
+            Rc::clone(&pending),
+        );
+        listen(
+            &wrapper,
+            "focusin",
+            &hint,
+            Visibility::Show(0),
+            Rc::clone(&pending),
+        );
+        listen(
+            &wrapper,
+            "focusout",
+            &hint,
+            Visibility::Hide,
+            Rc::clone(&pending),
+        );
+        listen_for_escape(&wrapper, &hint, pending);
 
         wrapper
     }
@@ -165,19 +191,38 @@ enum Visibility {
     Hide,
 }
 
-fn listen(wrapper: &Element, event: &str, hint: &Element, visibility: Visibility) {
+fn listen(
+    wrapper: &Element,
+    event: &str,
+    hint: &Element,
+    visibility: Visibility,
+    pending: Rc<Cell<Option<i32>>>,
+) {
     let hint = hint.clone();
     let handler = Closure::<dyn FnMut(web_sys::Event)>::new(move |_| match visibility {
-        Visibility::Hide => set_visible(&hint, false),
-        Visibility::Show(0) => set_visible(&hint, true),
+        Visibility::Hide => {
+            cancel_pending(&pending);
+            set_visible(&hint, false);
+        }
+        Visibility::Show(0) => {
+            cancel_pending(&pending);
+            set_visible(&hint, true);
+        }
         Visibility::Show(delay) => {
+            cancel_pending(&pending);
             let hint = hint.clone();
-            let later = Closure::once_into_js(move || set_visible(&hint, true));
+            let scheduled = Rc::clone(&pending);
+            let later = Closure::once_into_js(move || {
+                scheduled.set(None);
+                set_visible(&hint, true);
+            });
             if let Some(window) = web_sys::window() {
-                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+                if let Ok(id) = window.set_timeout_with_callback_and_timeout_and_arguments_0(
                     later.unchecked_ref(),
                     delay as i32,
-                );
+                ) {
+                    pending.set(Some(id));
+                }
             }
         }
     });
@@ -187,11 +232,12 @@ fn listen(wrapper: &Element, event: &str, hint: &Element, visibility: Visibility
     handler.forget();
 }
 
-fn listen_for_escape(wrapper: &Element, hint: &Element) {
+fn listen_for_escape(wrapper: &Element, hint: &Element, pending: Rc<Cell<Option<i32>>>) {
     let hint = hint.clone();
     let handler =
         Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(move |event: web_sys::KeyboardEvent| {
             if event.key() == "Escape" {
+                cancel_pending(&pending);
                 set_visible(&hint, false);
             }
         });
@@ -199,6 +245,14 @@ fn listen_for_escape(wrapper: &Element, hint: &Element) {
         .add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref())
         .expect("listen for tooltip escape");
     handler.forget();
+}
+
+fn cancel_pending(pending: &Cell<Option<i32>>) {
+    if let Some(id) = pending.take() {
+        if let Some(window) = web_sys::window() {
+            window.clear_timeout_with_handle(id);
+        }
+    }
 }
 
 fn set_visible(hint: &Element, visible: bool) {

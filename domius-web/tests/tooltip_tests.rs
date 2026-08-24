@@ -131,6 +131,30 @@ fn a_delayed_hint_waits_for_its_delay() {
 }
 
 #[wasm_bindgen_test]
+async fn leaving_before_the_delay_cancels_the_hint() {
+    let wrapper = Tooltip::create(TooltipProps {
+        content: "Median latency".into(),
+        children: trigger("button", "142 ms"),
+        delay: 20,
+        ..Default::default()
+    });
+
+    dispatch(&wrapper, "mouseenter");
+    dispatch(&wrapper, "mouseleave");
+    let wait = js_sys::Promise::new(&mut |resolve, _| {
+        web_sys::window()
+            .unwrap()
+            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, 40)
+            .expect("schedule test wait");
+    });
+    wasm_bindgen_futures::JsFuture::from(wait)
+        .await
+        .expect("test wait should finish");
+
+    assert!(!visible(&wrapper), "a stale hover must not reopen the hint");
+}
+
+#[wasm_bindgen_test]
 fn escape_dismisses_a_shown_hint() {
     let wrapper = Tooltip::create(TooltipProps {
         content: "Median latency".into(),
