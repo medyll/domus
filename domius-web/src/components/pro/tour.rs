@@ -432,11 +432,11 @@ fn trap_focus(root: &Element) {
             let wrap_back = event.shift_key()
                 && active
                     .as_ref()
-                    .map_or(true, |active| active.is_same_node(Some(&first)));
+                    .is_none_or(|active| active.is_same_node(Some(&first)));
             let wrap_forward = !event.shift_key()
                 && active
                     .as_ref()
-                    .map_or(true, |active| active.is_same_node(Some(&last)));
+                    .is_none_or(|active| active.is_same_node(Some(&last)));
             if wrap_back || wrap_forward {
                 event.prevent_default();
                 if wrap_back {
