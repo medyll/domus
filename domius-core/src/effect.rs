@@ -34,18 +34,23 @@ impl Effect {
     }
 
     fn run(effect: &Rc<Self>) {
-        // Track the running effect during execution.
-        let previous = RUNNING_EFFECT.with(|rt| rt.borrow_mut().replace(Rc::clone(effect)));
-
         // Take the closure out of the Cell, execute it, and put it back.
         // This avoids holding a borrow while executing, preventing conflicts.
-        if let Some(mut f) = effect.execute_fn.take() {
+        // The guard restores the closure and the previously running effect even
+        // if the closure unwinds: leaving either behind would silently break
+        // dependency tracking for every effect that ran afterwards.
+        let Some(f) = effect.execute_fn.take() else {
+            return;
+        };
+        let previous = RUNNING_EFFECT.with(|rt| rt.borrow_mut().replace(Rc::clone(effect)));
+        let mut guard = RunGuard {
+            effect: Rc::clone(effect),
+            closure: Some(f),
+            previous: Some(previous),
+        };
+        if let Some(f) = guard.closure.as_mut() {
             f();
-            effect.execute_fn.set(Some(f));
         }
-
-        // Restore previous running effect (if any).
-        RUNNING_EFFECT.with(|rt| *rt.borrow_mut() = previous);
     }
 
     /// Execute the effect once (without changing the TLS context).
@@ -71,6 +76,24 @@ impl Effect {
 
         // Re-run the effect with TLS tracking to establish fresh dependencies
         Self::run(effect);
+    }
+}
+
+/// Puts the runtime back the way it was, whether the effect returned or panicked.
+struct RunGuard {
+    effect: Rc<Effect>,
+    closure: Option<Box<dyn FnMut()>>,
+    previous: Option<Option<Rc<Effect>>>,
+}
+
+impl Drop for RunGuard {
+    fn drop(&mut self) {
+        if let Some(closure) = self.closure.take() {
+            self.effect.execute_fn.set(Some(closure));
+        }
+        if let Some(previous) = self.previous.take() {
+            RUNNING_EFFECT.with(|rt| *rt.borrow_mut() = previous);
+        }
     }
 }
 
@@ -107,6 +130,29 @@ mod tests {
         });
 
         assert_eq!(*runs.borrow(), 1);
+    }
+
+    #[test]
+    fn a_panicking_effect_does_not_break_the_ones_after_it() {
+        let poison = signal(0);
+        let poison_clone = poison.clone();
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            create_effect(move || {
+                poison_clone.get();
+                panic!("this effect gives up");
+            });
+        }));
+
+        // The runtime should be back the way it was, so a later effect still
+        // tracks its own signal rather than the abandoned one.
+        let source = signal(0);
+        let runs = Rc::new(RefCell::new(Vec::new()));
+        let watched = source.clone();
+        let recorded = Rc::clone(&runs);
+        create_effect(move || recorded.borrow_mut().push(watched.get()));
+
+        source.set(1);
+        assert_eq!(*runs.borrow(), vec![0, 1]);
     }
 
     #[test]
