@@ -200,6 +200,21 @@ fn a_repeated_key_gets_a_node_of_its_own() {
 }
 
 #[wasm_bindgen_test]
+fn shrinking_repeated_keys_removes_the_unclaimed_node() {
+    let host = host();
+    let mut list = KeyedList::mount(host.clone());
+    list.reconcile(&rows(&["a", "a"]), |row| row.id.to_string(), render);
+    let survivor = host.children().item(0).unwrap();
+
+    let patch = list.reconcile(&rows(&["a"]), |row| row.id.to_string(), render);
+
+    assert_eq!(patch.removes, vec![1]);
+    assert_eq!(patch.ops, vec![DiffOp::Keep(0)]);
+    assert_eq!(host.children().length(), 1);
+    assert!(survivor.is_same_node(host.first_child().as_ref()));
+}
+
+#[wasm_bindgen_test]
 fn clearing_the_list_empties_the_host() {
     let host = host();
     let mut list = KeyedList::mount(host.clone());

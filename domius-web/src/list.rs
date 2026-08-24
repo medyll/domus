@@ -3,7 +3,7 @@
 //! The `diff_keys` function and `ListPatch` enum are pure Rust and fully
 //! testable without WASM.  `KeyedList` wires them up to real DOM nodes.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 // ---------------------------------------------------------------------------
 // DiffOp — per-new-item operation
@@ -44,34 +44,30 @@ pub struct ListPatch {
 ///
 /// Time: O(N + M)  Space: O(N)
 pub fn diff_keys(old_keys: &[String], new_keys: &[String]) -> ListPatch {
-    // Build reverse index: key → old position
-    let old_map: HashMap<&str, usize> = old_keys
+    // Keep every occurrence. A HashMap<key, index> loses information when a
+    // key is repeated, which can leave an unclaimed old DOM node behind.
+    let mut old_map: HashMap<&str, VecDeque<usize>> = HashMap::new();
+    for (index, key) in old_keys.iter().enumerate() {
+        old_map.entry(key).or_default().push_back(index);
+    }
+
+    let mut claimed = vec![false; old_keys.len()];
+    let ops = new_keys
+        .iter()
+        .map(
+            |key| match old_map.get_mut(key.as_str()).and_then(VecDeque::pop_front) {
+                Some(old_index) => {
+                    claimed[old_index] = true;
+                    DiffOp::Keep(old_index)
+                }
+                None => DiffOp::Insert,
+            },
+        )
+        .collect();
+    let removes = claimed
         .iter()
         .enumerate()
-        .map(|(i, k)| (k.as_str(), i))
-        .collect();
-
-    // Build a set of new keys for O(1) "is key still present?" checks
-    let new_set: std::collections::HashSet<&str> = new_keys.iter().map(String::as_str).collect();
-
-    // Removes: old items whose key no longer appears in the new list
-    let removes: Vec<usize> = old_keys
-        .iter()
-        .enumerate()
-        .filter(|(_, k)| !new_set.contains(k.as_str()))
-        .map(|(i, _)| i)
-        .collect();
-
-    // Per-new-item operation
-    let ops: Vec<DiffOp> = new_keys
-        .iter()
-        .map(|k| {
-            if let Some(&old_idx) = old_map.get(k.as_str()) {
-                DiffOp::Keep(old_idx)
-            } else {
-                DiffOp::Insert
-            }
-        })
+        .filter_map(|(index, kept)| (!kept).then_some(index))
         .collect();
 
     ListPatch { removes, ops }
@@ -165,13 +161,10 @@ impl KeyedList {
             }
         }
 
-        // A key repeated in one sequence cannot share a node with itself, so
-        // only the first occurrence keeps the old node.
-        let mut claimed = std::collections::HashSet::new();
         let mut nodes = Vec::with_capacity(items.len());
         for (position, item) in items.iter().enumerate() {
             let node = match patch.ops[position] {
-                DiffOp::Keep(old_index) if claimed.insert(old_index) => {
+                DiffOp::Keep(old_index) => {
                     let node = self.nodes[old_index].clone();
                     update(&node, item);
                     node
@@ -419,5 +412,15 @@ mod tests {
         assert_eq!(inserts, 2);
         // a and c are removed
         assert_eq!(patch.removes.len(), 2);
+    }
+
+    #[test]
+    fn test_repeated_keys_are_matched_by_occurrence() {
+        let patch = diff_keys(&keys(&["a", "a", "b"]), &keys(&["a", "b", "b"]));
+        assert_eq!(patch.removes, vec![1]);
+        assert_eq!(
+            patch.ops,
+            vec![DiffOp::Keep(0), DiffOp::Keep(2), DiffOp::Insert]
+        );
     }
 }
