@@ -1,8 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use domius_core::{create_effect, signal, Signal};
+use domius_core::{signal, Signal};
 use domius_web::components::feedback::toast::ToastManager;
+use domius_web::disposal::ViewScope;
 use domius_web::domus;
 use domius_web::list::KeyedList;
 use wasm_bindgen::closure::Closure;
@@ -168,12 +169,15 @@ pub fn incident_queue(props: IncidentQueueProps) -> Element {
     };
     let render_incident = Rc::new(RefCell::new(render_incident));
 
+    // The queue owns its scope, so leaving the page stops the effect below
+    // instead of leaving it wired to the shared monitoring signal.
+    let scope = ViewScope::attach(&root);
     {
         let matching = props.filters.matching.clone();
         let order = order.clone();
         let list = Rc::clone(&list);
         let render_incident = Rc::clone(&render_incident);
-        create_effect(move || {
+        scope.effect(move || {
             let chosen = order.get();
             let incidents = ordered(&matching.get(), chosen);
             count.set_text_content(Some(&describe_count(incidents.len())));
