@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use domius_core::{signal, Signal};
+use domius_web::components::feedback::spinner::{spinner, SpinnerProps, SpinnerSize};
 use domius_web::components::feedback::toast::ToastManager;
 use domius_web::disposal::ViewScope;
 use domius_web::domus;
@@ -93,7 +94,10 @@ pub fn incident_queue(props: IncidentQueueProps) -> Element {
                 }
                 button(type: "button", id: "clear-filters") { "Clear filters" }
             }
-            p(id: "queue-count", role: "status") { }
+            div(class: "queue-status") {
+                p(id: "queue-count", role: "status") { }
+                div(id: "queue-spinner") { }
+            }
             ol(id: "queue-list", class: "queue-list") { }
         }
     };
@@ -151,16 +155,19 @@ pub fn incident_queue(props: IncidentQueueProps) -> Element {
         ],
     );
 
+    host(&root, "#queue-spinner")
+        .append_child(&spinner(SpinnerProps {
+            size: SpinnerSize::Small,
+            tip: Some("Applying filters".to_string()),
+            class: Some("queue-transition".to_string()),
+            ..Default::default()
+        }))
+        .expect("append queue spinner");
+    set_pending(&root, false);
+
     let order = signal(QueueOrder::default());
-    let list = Rc::new(RefCell::new(KeyedList::mount(
-        root.query_selector("#queue-list")
-            .expect("query queue list")
-            .expect("queue list host"),
-    )));
-    let count = root
-        .query_selector("#queue-count")
-        .expect("query queue count")
-        .expect("queue count host");
+    let list = Rc::new(RefCell::new(KeyedList::mount(host(&root, "#queue-list"))));
+    let count = host(&root, "#queue-count");
 
     let render_incident = {
         let data = props.data.clone();
@@ -177,6 +184,7 @@ pub fn incident_queue(props: IncidentQueueProps) -> Element {
         let order = order.clone();
         let list = Rc::clone(&list);
         let render_incident = Rc::clone(&render_incident);
+        let settled = root.clone();
         scope.effect(move || {
             let chosen = order.get();
             let incidents = ordered(&matching.get(), chosen);
@@ -194,11 +202,38 @@ pub fn incident_queue(props: IncidentQueueProps) -> Element {
                 |incident| render(incident),
                 refresh_card,
             );
+            // The list is in step with the filters again.
+            set_pending(&settled, false);
         });
     }
 
     wire_controls(&root, props.filters.clone(), order);
     root
+}
+
+/// Say whether the list still has to catch up with the controls.
+fn set_pending(root: &Element, pending: bool) {
+    root.set_attribute("data-pending", &pending.to_string())
+        .expect("expose queue transition");
+    let spinner = root
+        .query_selector("#queue-spinner")
+        .expect("query queue spinner")
+        .expect("queue spinner host");
+    if pending {
+        spinner
+            .remove_attribute("hidden")
+            .expect("show queue spinner");
+    } else {
+        spinner
+            .set_attribute("hidden", "")
+            .expect("hide queue spinner");
+    }
+}
+
+fn host(root: &Element, selector: &str) -> Element {
+    root.query_selector(selector)
+        .expect("query queue host")
+        .expect("queue host")
 }
 
 fn describe_count(count: usize) -> String {
@@ -216,6 +251,8 @@ fn wire_controls(root: &Element, filters: FilterContext, order: Signal<QueueOrde
         let filters = filters.clone();
         let order = order.clone();
         Rc::new(move || {
+            // The reconciliation lands on the next frame, so say so meanwhile.
+            set_pending(&root, true);
             filters.apply(
                 parse_severity(&selected(&root, "#filter-severity")),
                 parse_service(&selected(&root, "#filter-service")),
@@ -265,6 +302,7 @@ fn wire_controls(root: &Element, filters: FilterContext, order: Signal<QueueOrde
                 },
             );
         }
+        set_pending(&root_for_reset, true);
         filters.clear();
         order.set(QueueOrder::Newest);
     });

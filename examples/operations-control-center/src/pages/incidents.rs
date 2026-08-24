@@ -1,7 +1,10 @@
+use domius_core::signal::signal;
 use domius_core::Signal;
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
+use domius_web::components::feedback::progress::{ProgressBar, ProgressProps, ProgressVariant};
 use domius_web::components::feedback::toast::{ToastContainer, ToastManager};
 use domius_web::context::provide_context;
+use domius_web::disposal::ViewScope;
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
 use crate::components::{
@@ -71,6 +74,11 @@ impl DomiusComponent for IncidentsPage {
                     p { "Triage the deterministic production queue" }
                 }
                 section(id: "incident-statistics") { }
+                section(id: "resolution", class: "panel") {
+                    h2 { "Resolution progress" }
+                    p(id: "resolution-summary") { }
+                    div(id: "resolution-progress") { }
+                }
                 section(class: "panel") {
                     header(class: "section-header") {
                         h2 { "Working queue" }
@@ -117,6 +125,8 @@ impl DomiusComponent for IncidentsPage {
             state.acknowledged_count,
             "Already owned by an operator",
         );
+
+        append_resolution(&root, &state.data);
 
         let toasts = ToastManager::new();
         provide_context(toasts.clone());
@@ -167,6 +177,57 @@ impl DomiusPage for IncidentsPage {
     fn title(_: &Self::State) -> String {
         "Incident command | Domius".to_string()
     }
+}
+
+/// How much of the queue has been dealt with, following the shared data.
+fn append_resolution(root: &web_sys::Element, data: &Signal<MonitoringData>) {
+    let panel = root
+        .query_selector("#resolution")
+        .expect("query resolution panel")
+        .expect("resolution panel");
+    let summary = root
+        .query_selector("#resolution-summary")
+        .expect("query resolution summary")
+        .expect("resolution summary");
+    let percentage = signal(0u8);
+
+    let scope = ViewScope::attach(&panel);
+    let watched = data.clone();
+    let reported = percentage.clone();
+    let panel_for_effect = panel.clone();
+    scope.effect(move || {
+        let incidents = watched.get().incidents;
+        let acknowledged = incidents
+            .iter()
+            .filter(|incident| incident.acknowledged)
+            .count();
+        let share = if incidents.is_empty() {
+            0
+        } else {
+            ((acknowledged * 100) / incidents.len()) as u8
+        };
+        reported.set(share);
+        summary.set_text_content(Some(&format!(
+            "{acknowledged} of {} incidents acknowledged",
+            incidents.len()
+        )));
+        panel_for_effect
+            .set_attribute("data-acknowledged", &acknowledged.to_string())
+            .expect("expose acknowledged count");
+    });
+
+    root.query_selector("#resolution-progress")
+        .expect("query resolution progress")
+        .expect("resolution progress host")
+        .append_child(&ProgressBar::create(ProgressProps {
+            value: percentage,
+            max: 100,
+            show_label: true,
+            variant: ProgressVariant::Linear,
+            class: Some("resolution".to_string()),
+            ..Default::default()
+        }))
+        .expect("append resolution progress");
 }
 
 fn append_statistic(host: &web_sys::Element, title: &str, value: usize, description: &str) {
