@@ -17,3 +17,9 @@ web-sys = { version = "0.3", features = [
     "Document", "Element", "Event", "EventTarget", "History", "HtmlElement",
     "HtmlSelectElement", "Location", "MouseEvent", "Node", "Window"
 ] }
+
+[dev-dependencies]
+js-sys = "0.3"
+rqrr = { version = "0.10", default-features = false }
+wasm-bindgen-futures = "0.4"
+wasm-bindgen-test = "0.3"

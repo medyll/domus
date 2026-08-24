@@ -135,6 +135,27 @@ Ne pas placer toute l'application dans `lib.rs`. Les composants applicatifs asse
 5. Ajouter les vues analytiques `pro`, puis les états chargement, vide et erreur.
 6. Écrire les parcours navigateur et documenter les commandes de lancement.
 
+## Commandes de vérification
+
+```powershell
+cargo test --workspace --locked
+cargo test --manifest-path examples/operations-control-center/Cargo.toml
+cargo clippy --manifest-path examples/operations-control-center/Cargo.toml --all-targets -- -D warnings
+wasm-pack build examples/operations-control-center --target web
+wasm-pack test --headless --firefox examples/operations-control-center --test browser
+```
+
+La dernière commande exécute les tests d'acceptation ci-dessous dans un vrai
+navigateur. Deux limites de l'environnement méritent d'être connues :
+
+- le panneau navigateur intégré à l'éditeur ne compose pas d'images, donc
+  `requestAnimationFrame` ne s'y déclenche jamais et rien de réactif ne s'y met
+  à jour ; utiliser Playwright ou `wasm-pack` ;
+- le harnais `wasm-bindgen-test` se sert depuis la racine et se bloque si
+  l'application pousse une route à deux segments ; le test d'acceptation 1
+  change donc de route vers `/incidents`, et la route paramétrée est couverte
+  en démarrant directement dessus.
+
 ## Contrat de qualité
 
 - aucun `todo!`, `unimplemented!` ou panic volontaire sur un parcours visible ;
