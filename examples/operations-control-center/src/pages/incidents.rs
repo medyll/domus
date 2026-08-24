@@ -1,7 +1,7 @@
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
-use crate::components::{incident_history, IncidentHistoryProps};
+use crate::components::{incident_feed, incident_history, IncidentFeedProps, IncidentHistoryProps};
 use crate::data::{Incident, IncidentSeverity};
 use crate::state::MonitoringContext;
 
@@ -53,6 +53,13 @@ impl DomiusComponent for IncidentsPage {
                 section(id: "incident-statistics") { }
                 section(class: "panel") {
                     header(class: "section-header") {
+                        h2 { "Progressive incident feed" }
+                        p { "Scroll or use the load button to reveal the next batch" }
+                    }
+                    div(id: "incident-feed") { }
+                }
+                section(class: "panel") {
+                    header(class: "section-header") {
                         h2 { "All incidents" }
                         p { "Sort, filter, select and paginate the queue" }
                     }
@@ -83,6 +90,16 @@ impl DomiusComponent for IncidentsPage {
             state.acknowledged_count,
             "Already owned by an operator",
         );
+
+        let feed = incident_feed(IncidentFeedProps {
+            incidents: state.incidents.clone(),
+            batch_size: INCIDENTS_PER_PAGE,
+        });
+        root.query_selector("#incident-feed")
+            .expect("query incident feed")
+            .expect("incident feed host")
+            .append_child(&feed)
+            .expect("append incident feed");
 
         let history = incident_history(IncidentHistoryProps {
             incidents: state.incidents.clone(),
