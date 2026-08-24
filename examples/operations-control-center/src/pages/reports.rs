@@ -3,6 +3,9 @@ use std::collections::BTreeMap;
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
 use domius_web::components::pro::data_grid::{DataGrid, DataGridProps, GridColumn};
+use domius_web::components::pro::heatmap::{
+    Heatmap, HeatmapCell, HeatmapColorScale, HeatmapProps,
+};
 use domius_web::components::pro::pivot_table::{
     Aggregator, PivotData, PivotTable, PivotTableProps,
 };
@@ -82,6 +85,11 @@ impl DomiusComponent for ReportsPage {
                     p { "Average requests per second grouped by service and 20-minute window" }
                     div(id: "metric-pivot") { }
                 }
+                section(class: "panel") {
+                    h2 { "Error-rate activity map" }
+                    p { "Average error percentage by service and 10-minute window" }
+                    div(id: "error-heatmap") { }
+                }
             }
         };
 
@@ -153,8 +161,53 @@ impl DomiusComponent for ReportsPage {
             .expect("metric pivot host")
             .append_child(&metric_pivot(&state.services, &state.metrics))
             .expect("append metric pivot");
+        root.query_selector("#error-heatmap")
+            .expect("query error heatmap")
+            .expect("error heatmap host")
+            .append_child(&error_heatmap(&state.services, &state.metrics))
+            .expect("append error heatmap");
         root
     }
+}
+
+fn error_heatmap(services: &[Service], metrics: &[Metric]) -> web_sys::Element {
+    Heatmap::create(HeatmapProps {
+        data: heatmap_data(services, metrics),
+        x_labels: (0..6)
+            .map(|window| format!("{:02}-{:02} min", window * 10, window * 10 + 9))
+            .collect(),
+        y_labels: services.iter().map(|service| service.name.clone()).collect(),
+        color_scale: HeatmapColorScale::Sequential(vec![
+            "healthy".to_string(),
+            "watch".to_string(),
+            "warning".to_string(),
+            "critical".to_string(),
+        ]),
+        show_values: true,
+        on_cell_click: None,
+        class: Some("report-heatmap".to_string()),
+    })
+}
+
+fn heatmap_data(services: &[Service], metrics: &[Metric]) -> Vec<HeatmapCell> {
+    services
+        .iter()
+        .enumerate()
+        .flat_map(|(y, service)| {
+            (0..6).map(move |x| {
+                let window = metrics
+                    .iter()
+                    .filter(|metric| metric.service_id == service.id && metric.minute / 10 == x as u32)
+                    .collect::<Vec<_>>();
+                HeatmapCell {
+                    x,
+                    y,
+                    value: window.iter().map(|metric| metric.error_rate).sum::<f64>()
+                        / window.len().max(1) as f64,
+                }
+            })
+        })
+        .collect()
 }
 
 fn metric_pivot(services: &[Service], metrics: &[Metric]) -> web_sys::Element {
@@ -342,6 +395,7 @@ mod tests {
         assert_eq!(metric_rows(&data.metrics).len(), 360);
         let pivot = metric_pivot_data(&data.services, &data.metrics);
         assert_eq!(pivot.len(), 360);
+        assert_eq!(heatmap_data(&data.services, &data.metrics).len(), 36);
         assert_eq!(
             pivot
                 .iter()
