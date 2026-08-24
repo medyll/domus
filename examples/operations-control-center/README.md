@@ -31,7 +31,7 @@ Les deux autres applications couvrent l'édition riche et le desktop :
 
 ## Parcours attendu
 
-L'utilisateur arrive sur `/overview` et voit la santé des services, les alertes ouvertes et les délais avant dépassement de SLA. Il peut ensuite ouvrir `/services/:id`, filtrer les événements d'un service, réordonner une liste suivie et consulter les tendances. La route `/incidents` contient un flux paginé avec chargement progressif. Enfin, `/reports` permet de croiser les mêmes données dans une grille, une heatmap, un nuage de points et un tableau croisé.
+L'utilisateur arrive sur `/overview` et voit la santé des services, les alertes ouvertes et les délais avant dépassement de SLA. Il peut ensuite ouvrir `/services/:id`, filtrer les événements d'un service, réordonner une liste suivie et consulter les tendances. La route `/incidents` contient un flux paginé avec chargement progressif. Enfin, `/reports` permet de croiser les mêmes données dans une table filtrable, une grille, une heatmap, un nuage de points et un tableau croisé.
 
 Les données restent locales et déterministes. Prévoir un générateur de jeu de données avec une graine fixe plutôt qu'un faux serveur réseau.
 
@@ -63,7 +63,7 @@ Les données restent locales et déterministes. Prévoir un générateur de jeu 
 
 ### `/reports`
 
-- `DataGrid` pour explorer les données brutes ;
+- `DataTable` pour comparer les agrégats par service et `DataGrid` pour explorer les données brutes ;
 - `PivotTable`, `ScatterPlot` et `Heatmap` alimentés par la même source ;
 - état vide et état d'échec rendus avec `Result` ;
 - filigrane sur la zone exportable ;
@@ -145,16 +145,14 @@ wasm-pack build examples/operations-control-center --target web
 wasm-pack test --headless --firefox examples/operations-control-center --test browser
 ```
 
-La dernière commande exécute les tests d'acceptation ci-dessous dans un vrai
-navigateur. Deux limites de l'environnement méritent d'être connues :
+La dernière commande exécute les tests d'acceptation ci-dessous dans Firefox.
+Le premier test clique réellement sur `/services/svc-01`; un autre utilise le
+bouton Retour pour vérifier que l'URL, le titre et le DOM reviennent ensemble.
 
-- le panneau navigateur intégré à l'éditeur ne compose pas d'images, donc
-  `requestAnimationFrame` ne s'y déclenche jamais et rien de réactif ne s'y met
-  à jour ; utiliser Playwright ou `wasm-pack` ;
-- le harnais `wasm-bindgen-test` se sert depuis la racine et se bloque si
-  l'application pousse une route à deux segments ; le test d'acceptation 1
-  change donc de route vers `/incidents`, et la route paramétrée est couverte
-  en démarrant directement dessus.
+L'interface charge `@medyll/css-base` 0.7.10 depuis jsDelivr, puis applique les
+règles propres au centre d'opérations dans `styles.css`. Pour une vérification
+sans accès réseau, il faut servir une copie locale de `dist/app.css` et modifier
+le lien de `index.html`.
 
 ## Contrat de qualité
 
