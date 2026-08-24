@@ -1,10 +1,10 @@
-//! Tooltip component - Hover information popup.
+//! Tooltip component - Contextual hints on hover and focus.
 
-use domius_core::effect::create_effect;
-use domius_core::signal::{signal, Signal};
-use wasm_bindgen::prelude::*;
+use std::cell::Cell;
+
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{Element, HtmlElement, MouseEvent};
+use web_sys::{Document, Element};
 
 /// Tooltip position.
 #[derive(Clone, PartialEq, Debug)]
@@ -17,6 +17,21 @@ pub enum TooltipPosition {
     TopEnd,
     BottomStart,
     BottomEnd,
+}
+
+impl TooltipPosition {
+    fn token(&self) -> &'static str {
+        match self {
+            Self::Top => "top",
+            Self::Bottom => "bottom",
+            Self::Left => "left",
+            Self::Right => "right",
+            Self::TopStart => "top-start",
+            Self::TopEnd => "top-end",
+            Self::BottomStart => "bottom-start",
+            Self::BottomEnd => "bottom-end",
+        }
+    }
 }
 
 impl Default for TooltipPosition {
@@ -44,106 +59,162 @@ impl Default for TooltipProps {
             delay: 200,
             disabled: false,
             children: web_sys::window()
-                .unwrap()
+                .expect("no window")
                 .document()
-                .unwrap()
+                .expect("no document")
                 .create_element("span")
-                .unwrap()
-                .into(),
+                .expect("create tooltip placeholder"),
             class: None,
         }
     }
+}
+
+thread_local! {
+    /// Tooltip ids must be unique for aria-describedby to point anywhere.
+    static TOOLTIP_SEQUENCE: Cell<u32> = const { Cell::new(0) };
+}
+
+fn next_tooltip_id() -> String {
+    let sequence = TOOLTIP_SEQUENCE.with(|counter| {
+        let next = counter.get().wrapping_add(1);
+        counter.set(next);
+        next
+    });
+    format!("domius-tooltip-{sequence}")
 }
 
 /// Tooltip component.
 pub struct Tooltip;
 
 impl Tooltip {
-    /// Create a tooltip wrapper element.
+    /// Wrap `children` so a hint appears on hover and on focus.
+    ///
+    /// The hint is bound to the trigger with `aria-describedby`, shows without
+    /// delay for keyboard users, and answers Escape, so it is not a hint only a
+    /// mouse can reach.
     pub fn create(props: TooltipProps) -> Element {
         let document = web_sys::window()
             .expect("no window")
             .document()
             .expect("no document");
-
-        // Wrapper container
-        let wrapper: HtmlElement = document.create_element("span").unwrap().dyn_into().unwrap();
+        let wrapper = document
+            .create_element("span")
+            .expect("create tooltip wrapper");
+        wrapper.set_class_name("domius-tooltip-wrapper");
         wrapper
-            .set_attribute("class", "domius-tooltip-wrapper")
-            .unwrap();
-
-        // Append children
-        wrapper.append_child(&props.children).unwrap();
+            .append_child(&props.children)
+            .expect("append tooltip trigger");
 
         if props.disabled {
-            return wrapper.into();
+            wrapper
+                .set_attribute("data-disabled", "true")
+                .expect("mark tooltip disabled");
+            return wrapper;
         }
 
-        // Create tooltip element (hidden by default)
-        let tooltip: HtmlElement = document.create_element("div").unwrap().dyn_into().unwrap();
-
-        let mut classes = vec![
-            "domius-tooltip".to_string(),
-            format!("domius-tooltip-{:?}", props.position).to_lowercase(),
-        ];
-        if let Some(class) = &props.class {
-            classes.push(class.clone());
+        let id = next_tooltip_id();
+        let hint = build_hint(&document, &props, &id);
+        // The trigger is what a reader lands on, so the hint describes it.
+        props
+            .children
+            .set_attribute("aria-describedby", &id)
+            .expect("bind tooltip to its trigger");
+        // A trigger that cannot take focus can never show a hint by keyboard.
+        if !is_focusable(&props.children) {
+            props
+                .children
+                .set_attribute("tabindex", "0")
+                .expect("make tooltip trigger focusable");
         }
-        tooltip.set_attribute("class", &classes.join(" ")).unwrap();
-        tooltip.set_attribute("role", "tooltip").unwrap();
-        tooltip.set_text_content(Some(&props.content));
-        tooltip.set_attribute("aria-hidden", "true").unwrap();
+        wrapper.append_child(&hint).expect("append tooltip hint");
 
-        // State
-        let is_visible = signal(false);
-
-        // Show handler
-        let wrapper_show = wrapper.clone();
-        let tooltip_show = tooltip.clone();
-        let is_visible_show = is_visible.clone();
-        let delay_show = props.delay;
-        let show_closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
-            let is_visible_clone = is_visible_show.clone();
-            let tooltip_clone = tooltip_show.clone();
-
-            if delay_show > 0 {
-                let timeout_closure = Closure::once(move || {
-                    is_visible_clone.set(true);
-                    tooltip_clone.set_attribute("aria-hidden", "false").ok();
-                });
-                if let Some(window) = web_sys::window() {
-                    let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                        timeout_closure.as_ref().unchecked_ref(),
-                        delay_show as i32,
-                    );
-                    timeout_closure.forget();
-                }
-            } else {
-                is_visible_clone.set(true);
-                tooltip_clone.set_attribute("aria-hidden", "false").ok();
-            }
-        }) as Box<dyn FnMut(MouseEvent)>);
+        // Hover waits, because a pointer crossing a control did not ask for a
+        // hint; focus does not, because it did.
+        listen(&wrapper, "mouseenter", &hint, Visibility::Show(props.delay));
+        listen(&wrapper, "mouseleave", &hint, Visibility::Hide);
+        listen(&wrapper, "focusin", &hint, Visibility::Show(0));
+        listen(&wrapper, "focusout", &hint, Visibility::Hide);
+        listen_for_escape(&wrapper, &hint);
 
         wrapper
-            .add_event_listener_with_callback("mouseenter", show_closure.as_ref().unchecked_ref())
-            .unwrap();
-        show_closure.forget();
-
-        // Hide handler
-        let is_visible_hide = is_visible.clone();
-        let tooltip_hide = tooltip.clone();
-        let hide_closure = Closure::wrap(Box::new(move |_event: MouseEvent| {
-            is_visible_hide.set(false);
-            tooltip_hide.set_attribute("aria-hidden", "true").ok();
-        }) as Box<dyn FnMut(MouseEvent)>);
-
-        wrapper
-            .add_event_listener_with_callback("mouseleave", hide_closure.as_ref().unchecked_ref())
-            .unwrap();
-        hide_closure.forget();
-
-        wrapper.append_child(&tooltip).unwrap();
-
-        wrapper.into()
     }
+}
+
+fn build_hint(document: &Document, props: &TooltipProps, id: &str) -> Element {
+    let hint = document.create_element("div").expect("create tooltip");
+    let mut classes = vec!["domius-tooltip".to_string()];
+    classes.push(format!("domius-tooltip-{}", props.position.token()));
+    if let Some(class) = props.class.as_deref() {
+        classes.push(class.to_string());
+    }
+    hint.set_class_name(&classes.join(" "));
+    hint.set_id(id);
+    hint.set_attribute("role", "tooltip")
+        .expect("set tooltip role");
+    hint.set_attribute("data-position", props.position.token())
+        .expect("expose tooltip position");
+    hint.set_text_content(Some(&props.content));
+    set_visible(&hint, false);
+    hint
+}
+
+/// What a listener should do to the hint.
+#[derive(Clone, Copy)]
+enum Visibility {
+    Show(u64),
+    Hide,
+}
+
+fn listen(wrapper: &Element, event: &str, hint: &Element, visibility: Visibility) {
+    let hint = hint.clone();
+    let handler = Closure::<dyn FnMut(web_sys::Event)>::new(move |_| match visibility {
+        Visibility::Hide => set_visible(&hint, false),
+        Visibility::Show(0) => set_visible(&hint, true),
+        Visibility::Show(delay) => {
+            let hint = hint.clone();
+            let later = Closure::once_into_js(move || set_visible(&hint, true));
+            if let Some(window) = web_sys::window() {
+                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+                    later.unchecked_ref(),
+                    delay as i32,
+                );
+            }
+        }
+    });
+    wrapper
+        .add_event_listener_with_callback(event, handler.as_ref().unchecked_ref())
+        .expect("listen for tooltip event");
+    handler.forget();
+}
+
+fn listen_for_escape(wrapper: &Element, hint: &Element) {
+    let hint = hint.clone();
+    let handler =
+        Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(move |event: web_sys::KeyboardEvent| {
+            if event.key() == "Escape" {
+                set_visible(&hint, false);
+            }
+        });
+    wrapper
+        .add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref())
+        .expect("listen for tooltip escape");
+    handler.forget();
+}
+
+fn set_visible(hint: &Element, visible: bool) {
+    hint.set_attribute("data-visible", &visible.to_string())
+        .expect("expose tooltip visibility");
+    hint.set_attribute("aria-hidden", &(!visible).to_string())
+        .expect("hide tooltip from readers");
+}
+
+/// Elements that already take focus, and so need no tabindex of their own.
+fn is_focusable(element: &Element) -> bool {
+    if element.has_attribute("tabindex") {
+        return true;
+    }
+    matches!(
+        element.tag_name().to_ascii_lowercase().as_str(),
+        "a" | "button" | "input" | "select" | "textarea" | "summary"
+    )
 }
