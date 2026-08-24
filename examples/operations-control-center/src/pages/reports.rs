@@ -3,6 +3,9 @@ use std::collections::BTreeMap;
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
 use domius_web::components::pro::data_grid::{DataGrid, DataGridProps, GridColumn};
+use domius_web::components::pro::pivot_table::{
+    Aggregator, PivotData, PivotTable, PivotTableProps,
+};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
 use crate::data::{Incident, IncidentSeverity, Metric, Service};
@@ -74,6 +77,11 @@ impl DomiusComponent for ReportsPage {
                     p { "All 360 measurements in a frozen-column grid" }
                     div(id: "metric-grid") { }
                 }
+                section(class: "panel") {
+                    h2 { "Throughput by operational window" }
+                    p { "Average requests per second grouped by service and 20-minute window" }
+                    div(id: "metric-pivot") { }
+                }
             }
         };
 
@@ -140,8 +148,55 @@ impl DomiusComponent for ReportsPage {
             .expect("metric grid host")
             .append_child(&metric_grid(&state.metrics))
             .expect("append metric grid");
+        root.query_selector("#metric-pivot")
+            .expect("query metric pivot")
+            .expect("metric pivot host")
+            .append_child(&metric_pivot(&state.services, &state.metrics))
+            .expect("append metric pivot");
         root
     }
+}
+
+fn metric_pivot(services: &[Service], metrics: &[Metric]) -> web_sys::Element {
+    PivotTable::create(PivotTableProps {
+        data: metric_pivot_data(services, metrics),
+        rows: vec!["service".to_string()],
+        columns: vec!["window".to_string()],
+        values: vec!["throughput".to_string()],
+        aggregator: Aggregator::Average,
+        show_totals: true,
+        collapsible: true,
+        class: Some("report-pivot".to_string()),
+    })
+}
+
+fn metric_pivot_data(services: &[Service], metrics: &[Metric]) -> Vec<PivotData> {
+    let names = services
+        .iter()
+        .map(|service| (service.id.as_str(), service.name.as_str()))
+        .collect::<BTreeMap<_, _>>();
+    metrics
+        .iter()
+        .map(|metric| {
+            [
+                (
+                    "service".to_string(),
+                    names
+                        .get(metric.service_id.as_str())
+                        .copied()
+                        .unwrap_or(metric.service_id.as_str())
+                        .to_string(),
+                ),
+                (
+                    "window".to_string(),
+                    format!("{:02}-{:02} min", metric.minute / 20 * 20, metric.minute / 20 * 20 + 19),
+                ),
+                ("throughput".to_string(), metric.requests_per_second.to_string()),
+            ]
+            .into_iter()
+            .collect()
+        })
+        .collect()
 }
 
 fn metric_grid(metrics: &[Metric]) -> web_sys::Element {
@@ -285,6 +340,15 @@ mod tests {
         assert_eq!(errors.len(), 6);
         assert_eq!(severities.len(), 4);
         assert_eq!(metric_rows(&data.metrics).len(), 360);
+        let pivot = metric_pivot_data(&data.services, &data.metrics);
+        assert_eq!(pivot.len(), 360);
+        assert_eq!(
+            pivot
+                .iter()
+                .map(|row| row["window"].as_str())
+                .collect::<std::collections::BTreeSet<_>>(),
+            ["00-19 min", "20-39 min", "40-59 min"].into_iter().collect()
+        );
         assert_eq!(
             severities.iter().map(|point| point.value).sum::<f64>(),
             48.0
