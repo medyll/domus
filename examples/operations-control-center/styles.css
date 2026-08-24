@@ -168,6 +168,17 @@
     }
   }
 
+  .domius-chart[data-chart-type="line"] polyline {
+    fill: none;
+    stroke-width: var(--focus-ring-width);
+  }
+
+  .domius-chart[data-chart-type="area"] polygon {
+    fill: color-mix(in oklch, var(--color-primary), transparent 74%);
+    stroke: var(--color-primary);
+    stroke-width: var(--focus-ring-width);
+  }
+
   [data-color="primary"] {
     fill: var(--color-primary);
     stroke: var(--color-primary);

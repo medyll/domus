@@ -38,6 +38,15 @@ fn bar_chart_is_accessible_and_has_a_legend() {
     assert_eq!(chart.query_selector_all("svg rect").unwrap().length(), 3);
     assert_eq!(
         chart
+            .query_selector("svg rect")
+            .unwrap()
+            .unwrap()
+            .get_attribute("data-color")
+            .as_deref(),
+        Some("primary")
+    );
+    assert_eq!(
+        chart
             .query_selector_all(".domius-chart-legend li")
             .unwrap()
             .length(),
@@ -63,6 +72,15 @@ fn line_chart_exposes_points_and_native_tooltips() {
         ..Default::default()
     });
     assert_eq!(chart.query_selector_all("polyline").unwrap().length(), 1);
+    assert_eq!(
+        chart
+            .query_selector("polyline")
+            .unwrap()
+            .unwrap()
+            .get_attribute("data-color")
+            .as_deref(),
+        Some("primary")
+    );
     assert_eq!(
         chart.query_selector_all("circle title").unwrap().length(),
         3

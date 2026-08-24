@@ -60,7 +60,7 @@ impl Default for ChartsProps {
             show_legend: true,
             show_tooltip: true,
             animated: true,
-            colors: vec![],
+            colors: vec!["primary".to_string()],
             class: None,
         }
     }
@@ -196,6 +196,7 @@ fn render_cartesian(
             .set_attribute("points", &coordinates.join(" "))
             .expect("set chart points");
         shape.set_attribute("data-series", "0").expect("set series");
+        apply_color(&shape, props, 0);
         svg.append_child(&shape).expect("append chart shape");
     }
 
@@ -302,6 +303,7 @@ fn render_radial(document: &Document, svg: &Element, props: &ChartsProps, width:
     polygon
         .set_attribute("data-series", "0")
         .expect("set radial series");
+    apply_color(&polygon, props, 0);
     svg.append_child(&polygon).expect("append radial chart");
 }
 
