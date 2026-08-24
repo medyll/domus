@@ -25,3 +25,22 @@ pub fn app_navigation(active_path: &str, on_navigate: impl Fn(String) + 'static)
         ..Default::default()
     })
 }
+
+/// Mark links the shell should intercept instead of letting the browser reload.
+///
+/// Components from the library render plain anchors; the shell only wires the
+/// ones carrying this marker, so views opt in explicitly.
+pub fn mark_route_links(root: &Element, selector: &str) {
+    let links = root
+        .query_selector_all(selector)
+        .expect("query internal links");
+    for index in 0..links.length() {
+        if let Some(link) = links
+            .item(index)
+            .and_then(|node| wasm_bindgen::JsCast::dyn_into::<Element>(node).ok())
+        {
+            link.set_attribute("data-route", "")
+                .expect("mark internal link");
+        }
+    }
+}

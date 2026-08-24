@@ -12,6 +12,7 @@ use domius_web::components::pro::scatter_plot::{ScatterPlot, ScatterPlotProps, S
 use domius_web::components::pro::watermark::{Watermark, WatermarkProps};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
+use crate::components::mark_route_links;
 use crate::data::{Incident, IncidentSeverity, Metric, Service, ServiceStatus};
 use crate::state::MonitoringContext;
 
@@ -260,7 +261,7 @@ fn unavailable_report(result: web_sys::Element) -> DomiusNode {
         .expect("report state host")
         .append_child(&result)
         .expect("append report state");
-    mark_internal_links(&root);
+    mark_route_links(&root, ".domius-result-action");
     root
 }
 
@@ -270,22 +271,6 @@ fn report_exits() -> Vec<ResultAction> {
         ResultAction::new("Back to overview", "/overview").primary(),
         ResultAction::new("Open incidents", "/incidents"),
     ]
-}
-
-/// Let the shell intercept these links instead of reloading the application.
-fn mark_internal_links(root: &web_sys::Element) {
-    let links = root
-        .query_selector_all(".domius-result-action")
-        .expect("query result actions");
-    for index in 0..links.length() {
-        if let Some(link) = links
-            .item(index)
-            .and_then(|node| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(node).ok())
-        {
-            link.set_attribute("data-route", "")
-                .expect("mark internal result link");
-        }
-    }
 }
 
 /// Flag the analytical views as the exportable area and lay the watermark over them.

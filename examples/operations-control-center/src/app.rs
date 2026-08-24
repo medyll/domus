@@ -6,7 +6,11 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::JsValue;
 use web_sys::Element;
 
-use crate::components::app_navigation;
+use domius_web::components::pro::result::{
+    Result as ResultView, ResultAction, ResultProps, ResultStatus,
+};
+
+use crate::components::{app_navigation, mark_route_links};
 use crate::pages::{
     IncidentsPage, OverviewPage, ReportsPage, ServiceDetailPage, ServiceDetailProps,
 };
@@ -84,7 +88,7 @@ fn render_path(host: &Element, path: &str) -> Result<(), JsValue> {
         }
         AppRoute::NotFound => {
             document.set_title("Page not found | Domius");
-            placeholder("Page not found", "Return to /overview")
+            not_found_view(path)
         }
     };
     wire_route_links(&content, Rc::clone(&navigate));
@@ -118,14 +122,30 @@ fn wire_route_links(content: &Element, navigate: Rc<dyn Fn(String)>) {
     }
 }
 
-fn placeholder(title: &str, description: &str) -> Element {
-    let title = title.to_string();
-    let description = description.to_string();
-
-    domus! {
+/// Render an unknown route as a result the reader can act on, not a dead end.
+fn not_found_view(path: &str) -> Element {
+    let root = domus! {
         main(class: "route-placeholder") {
-            h1 { {title} }
-            p { {description} }
+            div(id: "route-state") { }
         }
-    }
+    };
+    let result = ResultView::create(ResultProps {
+        status: ResultStatus::Custom("404".to_string()),
+        title: "Page not found".to_string(),
+        description: Some(format!("No view is registered for {path}.")),
+        actions: vec![
+            ResultAction::new("Back to overview", "/overview").primary(),
+            ResultAction::new("Open incidents", "/incidents"),
+            ResultAction::new("Open reports", "/reports"),
+        ],
+        class: Some("route-not-found".to_string()),
+        ..Default::default()
+    });
+    mark_route_links(&result, ".domius-result-action");
+    root.query_selector("#route-state")
+        .expect("query route state")
+        .expect("route state host")
+        .append_child(&result)
+        .expect("append route state");
+    root
 }
