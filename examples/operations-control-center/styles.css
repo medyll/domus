@@ -1,18 +1,343 @@
-/* Layout rules the exportable report area needs to work.
-   Everything else in this example is deliberately unstyled. */
-
-.export-region {
-  position: relative;
+:root {
+  --color-primary: oklch(0.61 0.19 255);
 }
 
-.export-region > [data-role="watermark"] {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
+/* This application layer follows css-base utilities so data-driven chart and
+   heatmap colors can intentionally override their generic attr() utilities. */
+@layer operations {
+  #app {
+    min-height: 100dvh;
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
 
-.export-region > [data-role="watermark"] > [data-role="watermark-layer"] {
-  display: block;
-  width: 100%;
-  height: 100%;
+  .domius-navbar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-dropdown);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-lg);
+    padding: var(--pad-md) var(--pad-xl);
+    border-block-end: var(--border-width) solid var(--color-border);
+    background: var(--color-surface-overlay);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(var(--gutter-sm));
+
+    & .domius-navbar-brand {
+      font-size: var(--text-lg);
+      font-weight: var(--font-bold);
+    }
+
+    & .domius-navbar-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--gap-xs);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    & .domius-navbar-link {
+      display: inline-flex;
+      padding: var(--pad-sm) var(--pad-md);
+      border-radius: var(--radius-sm);
+      color: var(--color-text-muted);
+      text-decoration: none;
+
+      &:hover,
+      &:focus-visible,
+      &[aria-current="page"] {
+        background: var(--color-surface-active);
+        color: var(--color-primary);
+      }
+    }
+  }
+
+  main {
+    inline-size: min(100% - 2 * var(--gutter-lg), 90rem);
+    margin-inline: auto;
+    padding-block: var(--pad-xl) var(--pad-3xl);
+  }
+
+  .section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-md);
+    margin-block-end: var(--marg-xl);
+
+    & h1,
+    & p {
+      margin: 0;
+    }
+
+    & p {
+      flex-basis: 100%;
+      color: var(--color-text-muted);
+    }
+  }
+
+  .panel,
+  .card {
+    margin-block: var(--marg-lg);
+  }
+
+  #overview-statistics,
+  #report-statistics,
+  #service-health,
+  .overview-placeholder > div,
+  .incidents-page > section:first-of-type {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--gap-lg);
+  }
+
+  #service-health > h2 {
+    grid-column: 1 / -1;
+  }
+
+  .incident-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--gap-md);
+    margin-block-end: var(--marg-lg);
+  }
+
+  .queue-list {
+    display: grid;
+    gap: var(--gap-sm);
+  }
+
+  .queue-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--gap-sm) var(--gap-lg);
+    align-items: center;
+    padding: var(--pad-md);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-raised);
+
+    &:hover {
+      border-color: var(--color-border-strong);
+      box-shadow: var(--shadow-sm);
+    }
+  }
+
+  .queue-item-title,
+  .queue-item-service {
+    font-weight: var(--font-semibold);
+  }
+
+  .queue-item-meta,
+  .queue-item-age {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .table-container,
+  .data-grid,
+  .pivot-table,
+  .heatmap {
+    max-inline-size: 100%;
+    overflow: auto;
+  }
+
+  .domius-chart,
+  .domius-scatter-plot {
+    margin: 0;
+
+    & svg {
+      display: block;
+      inline-size: 100%;
+      block-size: auto;
+      max-block-size: 24rem;
+    }
+
+    & [data-role="grid"] line,
+    & [data-role="axes"] line,
+    & [data-role="tick"] line {
+      stroke: var(--color-border);
+    }
+
+    & text {
+      fill: var(--color-text-muted);
+    }
+  }
+
+  [data-color="primary"] {
+    fill: var(--color-primary);
+    stroke: var(--color-primary);
+  }
+
+  [data-color="healthy"] {
+    background: color-mix(in oklch, var(--color-success), transparent 72%);
+    fill: var(--color-success);
+    stroke: var(--color-success);
+  }
+
+  [data-color="watch"],
+  [data-color="info"] {
+    background: color-mix(in oklch, var(--color-info), transparent 76%);
+    fill: var(--color-info);
+    stroke: var(--color-info);
+  }
+
+  [data-color="warning"] {
+    background: color-mix(in oklch, var(--color-warning), transparent 70%);
+    fill: var(--color-warning);
+    stroke: var(--color-warning);
+  }
+
+  [data-color="critical"] {
+    background: color-mix(in oklch, var(--color-critical), transparent 66%);
+    fill: var(--color-critical);
+    stroke: var(--color-critical);
+  }
+
+  [data-color="neutral"] {
+    fill: var(--color-text-muted);
+    stroke: var(--color-text-muted);
+  }
+
+  .heatmap td[data-value] {
+    min-inline-size: 5rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .domius-tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .domius-tooltip {
+    position: absolute;
+    z-index: var(--z-dropdown);
+    inline-size: max-content;
+    max-inline-size: 18rem;
+    padding: var(--pad-sm) var(--pad-md);
+    border-radius: var(--radius-sm);
+    background: var(--color-text);
+    color: var(--color-surface);
+    box-shadow: var(--shadow-md);
+    font-size: var(--text-sm);
+    pointer-events: none;
+
+    &[aria-hidden="true"] {
+      display: none;
+    }
+
+    &[data-position^="bottom"] {
+      inset-block-start: calc(100% + var(--gutter-xs));
+    }
+
+    &[data-position^="top"] {
+      inset-block-end: calc(100% + var(--gutter-xs));
+    }
+  }
+
+  .domius-tour {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: grid;
+    place-items: center;
+    padding: var(--pad-lg);
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .domius-tour-overlay {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in oklch, var(--color-text), transparent 52%);
+  }
+
+  .domius-tour-step {
+    position: relative;
+    inline-size: min(100%, 32rem);
+    padding: var(--pad-xl);
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-raised);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .domius-tour-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--gap-sm);
+    margin-block-start: var(--marg-lg);
+  }
+
+  .domius-tour-indicators {
+    display: flex;
+    gap: var(--gap-xs);
+    padding: 0;
+    list-style: none;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+
+    & [data-current="true"] {
+      color: var(--color-primary);
+      font-weight: var(--font-bold);
+    }
+  }
+
+  [data-tour-target="true"] {
+    outline: var(--focus-ring-width) solid var(--color-primary);
+    outline-offset: var(--focus-ring-gap);
+  }
+
+  .domius-progress-bar {
+    fill: var(--color-primary);
+    stroke: var(--color-primary);
+  }
+
+  .backtop {
+    position: fixed;
+    inset-inline-end: var(--gutter-lg);
+    inset-block-end: var(--gutter-lg);
+    z-index: var(--z-dropdown);
+  }
+
+  .affix[data-affixed="true"] {
+    position: sticky;
+    inset-block-start: var(--gutter-lg);
+    z-index: var(--z-dropdown);
+  }
+
+  .export-region {
+    position: relative;
+  }
+
+  .export-region > [data-role="watermark"] {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .export-region > [data-role="watermark"] > [data-role="watermark-layer"] {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  @media (width < 48rem) {
+    .domius-navbar {
+      align-items: flex-start;
+      flex-direction: column;
+      padding-inline: var(--pad-md);
+    }
+
+    main {
+      inline-size: min(100% - 2 * var(--gutter-md), 90rem);
+    }
+  }
 }

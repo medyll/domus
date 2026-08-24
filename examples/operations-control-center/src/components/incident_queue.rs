@@ -98,7 +98,7 @@ pub fn incident_queue(props: IncidentQueueProps) -> Element {
                 p(id: "queue-count", role: "status") { }
                 div(id: "queue-spinner") { }
             }
-            ol(id: "queue-list", class: "queue-list") { }
+            ol(id: "queue-list", class: "list list-stack queue-list") { }
         }
     };
 
