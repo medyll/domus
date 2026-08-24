@@ -8,6 +8,7 @@ use domius_web::components::pro::pivot_table::{
     Aggregator, PivotData, PivotTable, PivotTableProps,
 };
 use domius_web::components::pro::scatter_plot::{ScatterPlot, ScatterPlotProps, ScatterPoint};
+use domius_web::components::pro::watermark::{Watermark, WatermarkProps};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
 use crate::data::{Incident, IncidentSeverity, Metric, Service, ServiceStatus};
@@ -74,25 +75,27 @@ impl DomiusComponent for ReportsPage {
                     h2 { "Incident severity mix" }
                     div(id: "severity-chart") { }
                 }
-                section(class: "panel") {
-                    h2 { "Raw metric workspace" }
-                    p { "All 360 measurements in a frozen-column grid" }
-                    div(id: "metric-grid") { }
-                }
-                section(class: "panel") {
-                    h2 { "Throughput by operational window" }
-                    p { "Average requests per second grouped by service and 20-minute window" }
-                    div(id: "metric-pivot") { }
-                }
-                section(class: "panel") {
-                    h2 { "Error-rate activity map" }
-                    p { "Average error percentage by service and 10-minute window" }
-                    div(id: "error-heatmap") { }
-                }
-                section(class: "panel") {
-                    h2 { "Throughput against error rate" }
-                    p { "One point per service and 10-minute window, sized by open incidents" }
-                    div(id: "correlation-scatter") { }
+                div(id: "export-region", class: "export-region") {
+                    section(class: "panel") {
+                        h2 { "Raw metric workspace" }
+                        p { "All 360 measurements in a frozen-column grid" }
+                        div(id: "metric-grid") { }
+                    }
+                    section(class: "panel") {
+                        h2 { "Throughput by operational window" }
+                        p { "Average requests per second grouped by service and 20-minute window" }
+                        div(id: "metric-pivot") { }
+                    }
+                    section(class: "panel") {
+                        h2 { "Error-rate activity map" }
+                        p { "Average error percentage by service and 10-minute window" }
+                        div(id: "error-heatmap") { }
+                    }
+                    section(class: "panel") {
+                        h2 { "Throughput against error rate" }
+                        p { "One point per service and 10-minute window, sized by open incidents" }
+                        div(id: "correlation-scatter") { }
+                    }
                 }
             }
         };
@@ -179,8 +182,33 @@ impl DomiusComponent for ReportsPage {
                 &state.metrics,
             ))
             .expect("append correlation scatter");
+        mark_export_region(&root);
         root
     }
+}
+
+/// Flag the analytical views as the exportable area and lay the watermark over them.
+fn mark_export_region(root: &web_sys::Element) {
+    let region = root
+        .query_selector("#export-region")
+        .expect("query export region")
+        .expect("export region host");
+    region
+        .set_attribute("data-exportable", "true")
+        .expect("flag export region");
+    region
+        .append_child(&Watermark::create(WatermarkProps {
+            text: Some("OPERATIONS INTERNAL".to_string()),
+            opacity: 0.12,
+            rotation: -24.0,
+            gap: (260, 160),
+            offset: (130, 80),
+            font_size: 20,
+            font_color: "#1f2933".to_string(),
+            class: Some("report-watermark".to_string()),
+            ..Default::default()
+        }))
+        .expect("append export watermark");
 }
 
 fn correlation_scatter(
