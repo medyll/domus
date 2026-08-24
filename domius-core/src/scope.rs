@@ -31,6 +31,8 @@ pub struct Scope {
     pub effects: Vec<Rc<Effect>>,
     /// Parent scope, if any (for nested scopes).
     pub parent: Option<ScopeId>,
+    /// Resource cleanup callbacks run when the scope is disposed.
+    cleanups: Vec<Box<dyn FnOnce()>>,
 }
 
 thread_local! {
@@ -47,6 +49,7 @@ pub fn create_scope(parent: Option<ScopeId>) -> ScopeId {
         id,
         effects: Vec::new(),
         parent,
+        cleanups: Vec::new(),
     };
     SCOPES.with(|scopes| scopes.borrow_mut().insert(id, scope));
     id
@@ -57,14 +60,15 @@ pub fn dispose_scope(scope_id: ScopeId) {
     use crate::signal::unsubscribe_effect_from_all;
 
     // Remove scope and unsubscribe its effects from signals.
-    SCOPES.with(|scopes| {
-        let mut scopes = scopes.borrow_mut();
-        if let Some(scope) = scopes.remove(&scope_id) {
-            for eff in scope.effects.iter() {
-                unsubscribe_effect_from_all(eff);
-            }
+    let scope = SCOPES.with(|scopes| scopes.borrow_mut().remove(&scope_id));
+    if let Some(scope) = scope {
+        for eff in &scope.effects {
+            unsubscribe_effect_from_all(eff);
         }
-    });
+        for cleanup in scope.cleanups {
+            cleanup();
+        }
+    }
 }
 
 /// Create an effect and register it inside the given scope.
@@ -80,6 +84,18 @@ pub fn create_effect_in_scope<F: FnMut() + 'static>(scope_id: ScopeId, f: F) -> 
         } else {
             None
         }
+    })
+}
+
+/// Register resource cleanup to run when `scope_id` is disposed.
+pub fn on_scope_dispose<F: FnOnce() + 'static>(scope_id: ScopeId, cleanup: F) -> bool {
+    SCOPES.with(|scopes| {
+        let mut scopes = scopes.borrow_mut();
+        let Some(scope) = scopes.get_mut(&scope_id) else {
+            return false;
+        };
+        scope.cleanups.push(Box::new(cleanup));
+        true
     })
 }
 
@@ -283,5 +299,20 @@ mod tests {
 
         signal_outside.set(99);
         assert_eq!(*runs.borrow(), 2);
+    }
+
+    #[test]
+    fn scope_runs_registered_resource_cleanup_once() {
+        let scope = create_scope(None);
+        let calls = Rc::new(RefCell::new(0));
+        let recorded = Rc::clone(&calls);
+        assert!(on_scope_dispose(scope, move || {
+            *recorded.borrow_mut() += 1;
+        }));
+
+        dispose_scope(scope);
+        dispose_scope(scope);
+
+        assert_eq!(*calls.borrow(), 1);
     }
 }

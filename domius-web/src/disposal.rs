@@ -22,7 +22,9 @@
 //! attribute on removal and calls `dispose_scope`. Use [`ViewScope`] rather
 //! than writing the attribute by hand: it holds the two halves together.
 
-use domius_core::scope::{create_effect_in_scope, create_scope, dispose_scope, ScopeId};
+use domius_core::scope::{
+    create_effect_in_scope, create_scope, dispose_scope, on_scope_dispose, ScopeId,
+};
 use web_sys::Element;
 
 /// Attribute the observer reads to find the scope a removed element owned.
@@ -64,6 +66,14 @@ impl ViewScope {
     /// Run `f` now and on every change, until the scope is disposed.
     pub fn effect<F: FnMut() + 'static>(&self, f: F) {
         create_effect_in_scope(self.id, f).expect("scope should still be alive");
+    }
+
+    /// Release a non-reactive resource when this view leaves the document.
+    pub fn cleanup<F: FnOnce() + 'static>(&self, cleanup: F) {
+        assert!(
+            on_scope_dispose(self.id, cleanup),
+            "scope should still be alive"
+        );
     }
 
     /// Stop every effect in this scope without waiting for the observer.
