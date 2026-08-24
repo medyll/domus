@@ -163,3 +163,5 @@ Codex possède ce dossier, `domius-core`, le routeur, le contexte web, la récon
 ## Journal de décisions
 
 Ajouter ici toute décision qui change une API publique ou déplace une fonctionnalité vers un autre exemple. Une entrée tient sur une ligne : date, décision, fichiers concernés.
+
+- 2026-08-24 : `ResultProps.extra_actions: Option<String>` devient `actions: Vec<ResultAction>` et `Result::not_found` prend ses actions en argument ; le HTML brut injecté par `set_inner_html` disparaît au profit de vrais liens atteignables au clavier — `domius-web/src/components/pro/result.rs`, `domius-web/tests/result_tests.rs`.
