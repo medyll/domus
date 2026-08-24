@@ -1,15 +1,22 @@
 use domius_core::computed::{computed, Computed};
-use domius_core::signal::Signal;
+use domius_core::signal::{signal, Signal};
 use domius_web::components::data::badge::{Badge, BadgeProps, BadgeVariant};
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
+use domius_web::components::feedback::skeleton::{Skeleton, SkeletonProps, SkeletonVariant};
+use domius_web::components::feedback::tooltip::{Tooltip, TooltipPosition, TooltipProps};
 use domius_web::components::primitives::card::{card, card_body, CardProps};
 use domius_web::components::primitives::countdown::{countdown, CountdownFormat, CountdownProps};
 use domius_web::components::primitives::scrolltext::{
     scrolltext, ScrollTextDirection, ScrollTextProps,
 };
 use domius_web::components::pro::heatmap::{Heatmap, HeatmapCell, HeatmapColorScale, HeatmapProps};
+use domius_web::components::pro::tour::{Tour, TourPosition, TourProps, TourStep};
+use domius_web::disposal::ViewScope;
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
+use web_sys::Element;
 
 use crate::data::aggregates::{
     error_rate_windows, throughput_by_minute, window_count, window_label,
@@ -49,12 +56,59 @@ impl DomiusComponent for OverviewPage {
     }
 
     fn render(state: &Self::State) -> DomiusNode {
-        let root = domus! {
+        let page = domus! {
             main(class: "operations-overview") {
-                header {
+                header(class: "section-header") {
                     h1 { "Operations overview" }
                     p { "Deterministic production snapshot" }
+                    button(type: "button", id: "start-tour") { "Take the tour" }
                 }
+                div(id: "overview-body") { }
+            }
+        };
+
+        let body = host(&page, "#overview-body");
+        let ready = signal(false);
+        let data = state.data.clone();
+        let open_incidents = state.open_incidents.clone();
+        let impacted_services = state.impacted_services.clone();
+        let filled = body.clone();
+        let watched = ready.clone();
+        let scope = ViewScope::attach(&page);
+        scope.effect(move || {
+            let loaded = watched.get();
+            filled.set_text_content(None);
+            filled
+                .set_attribute("data-state", if loaded { "ready" } else { "loading" })
+                .expect("expose overview state");
+            if loaded {
+                filled
+                    .append_child(&snapshot(
+                        &data.get(),
+                        open_incidents.get(),
+                        impacted_services.get(),
+                    ))
+                    .expect("append overview snapshot");
+            } else {
+                filled
+                    .append_child(&placeholder())
+                    .expect("append overview placeholder");
+            }
+        });
+        // The first paint belongs to the skeletons; the real snapshot lands on
+        // the frame after, so the page never starts as a blank rectangle.
+        on_next_frame(move || ready.set(true));
+
+        page.append_child(&guided_tour(&page))
+            .expect("append overview tour");
+        page
+    }
+}
+
+/// The overview once its window is known.
+fn snapshot(data: &MonitoringData, open_incidents: usize, impacted_services: usize) -> Element {
+    let root = domus! {
+        div(class: "overview-snapshot") {
                 div(id: "critical-alert") { }
                 section(id: "overview-statistics") { }
                 section(id: "sla-countdown", class: "panel") {
@@ -74,56 +128,50 @@ impl DomiusComponent for OverviewPage {
                 section(id: "service-health") {
                     h2 { "Service health" }
                 }
-            }
-        };
+        }
+    };
 
-        let statistics = root
-            .query_selector("#overview-statistics")
-            .expect("query statistics")
-            .expect("statistics container");
-        statistics
-            .append_child(&statistic_card(StatisticCardProps {
-                statistic: StatisticProps {
-                    title: Some("Open incidents".to_string()),
-                    value: state.open_incidents.get().to_string(),
-                    description: Some("Awaiting acknowledgement or resolution".to_string()),
-                    ..Default::default()
-                },
-                bordered: true,
+    let statistics = host(&root, "#overview-statistics");
+    statistics
+        .append_child(&statistic_card(StatisticCardProps {
+            statistic: StatisticProps {
+                title: Some("Open incidents".to_string()),
+                value: open_incidents.to_string(),
+                description: Some("Awaiting acknowledgement or resolution".to_string()),
                 ..Default::default()
-            }))
-            .expect("append incident statistic");
-        statistics
-            .append_child(&statistic_card(StatisticCardProps {
-                statistic: StatisticProps {
-                    title: Some("Impacted services".to_string()),
-                    value: state.impacted_services.get().to_string(),
-                    description: Some("Degraded or unavailable".to_string()),
-                    ..Default::default()
-                },
-                bordered: true,
+            },
+            bordered: true,
+            ..Default::default()
+        }))
+        .expect("append incident statistic");
+    statistics
+        .append_child(&statistic_card(StatisticCardProps {
+            statistic: StatisticProps {
+                title: Some("Impacted services".to_string()),
+                value: impacted_services.to_string(),
+                description: Some("Degraded or unavailable".to_string()),
                 ..Default::default()
-            }))
-            .expect("append service statistic");
+            },
+            bordered: true,
+            ..Default::default()
+        }))
+        .expect("append service statistic");
 
-        let window = state.data.get();
-        append_critical_alert(&root, &window);
-        append_sla_countdown(&root, &window);
-        append_load_curve(&root, &window);
-        append_activity_map(&root, &window);
+    append_critical_alert(&root, data);
+    append_sla_countdown(&root, data);
+    append_load_curve(&root, data);
+    append_activity_map(&root, data);
 
-        let health = root
-            .query_selector("#service-health")
-            .expect("query service health")
-            .expect("service health container");
-        for service in state.data.get().services {
+    let health = host(&root, "#service-health");
+    {
+        for service in data.services.clone() {
             let service_card = card(CardProps {
                 title: Some(service.name),
-                extra: Some(format!("{} ms", service.latency_ms)),
                 bordered: true,
                 hoverable: true,
                 ..Default::default()
             });
+            append_latency(&service_card, service.latency_ms);
             card_body(
                 &service_card,
                 &format!("Error rate {:.2}%", service.error_rate),
@@ -163,8 +211,130 @@ impl DomiusComponent for OverviewPage {
                 .append_child(&service_card)
                 .expect("append service card");
         }
+    }
 
-        root
+    root
+}
+
+/// What the page shows while the window is still being read.
+fn placeholder() -> Element {
+    let root = domus! {
+        div(class: "overview-placeholder", role: "status") {
+            p(class: "visually-hidden") { "Loading the operations snapshot" }
+            div(id: "placeholder-statistics") { }
+            div(id: "placeholder-panels") { }
+        }
+    };
+    let statistics = host(&root, "#placeholder-statistics");
+    for _ in 0..2 {
+        statistics
+            .append_child(&Skeleton::create(SkeletonProps {
+                variant: SkeletonVariant::Rounded,
+                height: Some("6rem".to_string()),
+                class: Some("statistic".to_string()),
+                ..Default::default()
+            }))
+            .expect("append statistic placeholder");
+    }
+    let panels = host(&root, "#placeholder-panels");
+    for _ in 0..3 {
+        panels
+            .append_child(&Skeleton::create(SkeletonProps {
+                variant: SkeletonVariant::Rectangular,
+                height: Some("12rem".to_string()),
+                lines: Some(1),
+                class: Some("panel".to_string()),
+                ..Default::default()
+            }))
+            .expect("append panel placeholder");
+    }
+    root
+}
+
+/// Abbreviated figures need their full meaning within reach of the keyboard.
+fn append_latency(service_card: &Element, latency_ms: u32) {
+    let value = service_card
+        .owner_document()
+        .expect("service card document")
+        .create_element("span")
+        .expect("create latency value");
+    value.set_class_name("card-extra");
+    value.set_text_content(Some(&format!("{latency_ms} ms")));
+    service_card
+        .append_child(&Tooltip::create(TooltipProps {
+            content: format!("Median response time over the window: {latency_ms} milliseconds"),
+            position: TooltipPosition::BottomEnd,
+            children: value,
+            class: Some("latency".to_string()),
+            ..Default::default()
+        }))
+        .expect("append latency tooltip");
+}
+
+/// The contextual help, wired to the button in the page header.
+fn guided_tour(page: &Element) -> Element {
+    let active = signal(false);
+    let tour = Tour::create(TourProps {
+        steps: vec![
+            tour_step(
+                "sla-countdown",
+                "Next deadline",
+                "The open incident closest to breaching its SLA, and how long it has left.",
+                TourPosition::Bottom,
+            ),
+            tour_step(
+                "load-curve",
+                "Fleet load",
+                "Requests per second across every service, minute by minute.",
+                TourPosition::Bottom,
+            ),
+            tour_step(
+                "activity-map",
+                "Error activity",
+                "Where errors concentrated, by service and 10-minute window.",
+                TourPosition::Top,
+            ),
+            tour_step(
+                "service-health",
+                "Service health",
+                "Each service, its latency and its way into the detail page.",
+                TourPosition::Top,
+            ),
+        ],
+        active: active.clone(),
+        current_step: signal(0),
+        class: Some("overview-tour".to_string()),
+        ..Default::default()
+    });
+
+    let start = page
+        .query_selector("#start-tour")
+        .expect("query tour button")
+        .expect("tour button");
+    let handler = Closure::<dyn FnMut(web_sys::Event)>::new(move |_| active.set(true));
+    start
+        .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
+        .expect("listen for tour start");
+    handler.forget();
+    tour
+}
+
+fn tour_step(target: &str, title: &str, description: &str, position: TourPosition) -> TourStep {
+    TourStep {
+        target_id: target.to_string(),
+        title: title.to_string(),
+        description: description.to_string(),
+        position,
+    }
+}
+
+/// Hand the current paint back to the browser, then run `task`.
+fn on_next_frame<F: FnOnce() + 'static>(task: F) {
+    let callback = Closure::once_into_js(task);
+    if let Some(window) = web_sys::window() {
+        window
+            .request_animation_frame(callback.unchecked_ref())
+            .expect("schedule the overview snapshot");
     }
 }
 
@@ -246,7 +416,7 @@ pub fn sla_outlook(data: &MonitoringData) -> SlaOutlook<'_> {
     }
 }
 
-fn append_critical_alert(root: &web_sys::Element, data: &MonitoringData) {
+fn append_critical_alert(root: &Element, data: &MonitoringData) {
     let lines = critical_alert_lines(data);
     let host = host(root, "#critical-alert");
     if lines.is_empty() {
@@ -269,7 +439,7 @@ fn append_critical_alert(root: &web_sys::Element, data: &MonitoringData) {
     .expect("append alert banner");
 }
 
-fn append_sla_countdown(root: &web_sys::Element, data: &MonitoringData) {
+fn append_sla_countdown(root: &Element, data: &MonitoringData) {
     let panel = host(root, "#sla-countdown");
     let subject = host(root, "#sla-subject");
     let outlook = sla_outlook(data);
@@ -307,7 +477,7 @@ fn append_sla_countdown(root: &web_sys::Element, data: &MonitoringData) {
         .expect("append sla countdown");
 }
 
-fn append_load_curve(root: &web_sys::Element, data: &MonitoringData) {
+fn append_load_curve(root: &Element, data: &MonitoringData) {
     host(root, "#load-chart")
         .append_child(&Charts::create(ChartsProps {
             chart_type: ChartType::Area,
@@ -325,7 +495,7 @@ fn append_load_curve(root: &web_sys::Element, data: &MonitoringData) {
         .expect("append load curve");
 }
 
-fn append_activity_map(root: &web_sys::Element, data: &MonitoringData) {
+fn append_activity_map(root: &Element, data: &MonitoringData) {
     host(root, "#activity-heatmap")
         .append_child(&Heatmap::create(HeatmapProps {
             data: error_rate_windows(&data.services, &data.metrics, ACTIVITY_WINDOW)
@@ -353,7 +523,7 @@ fn append_activity_map(root: &web_sys::Element, data: &MonitoringData) {
         .expect("append activity map");
 }
 
-fn host(root: &web_sys::Element, selector: &str) -> web_sys::Element {
+fn host(root: &Element, selector: &str) -> Element {
     root.query_selector(selector)
         .expect("query overview host")
         .expect("overview host")
