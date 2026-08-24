@@ -344,3 +344,85 @@ fn a_tour_without_steps_never_opens() {
     assert_eq!(tour.get_attribute("data-active").as_deref(), Some("false"));
     assert!(tour.has_attribute("hidden"));
 }
+
+#[wasm_bindgen_test]
+async fn a_modal_tour_moves_traps_and_restores_focus() {
+    use wasm_bindgen::JsCast;
+
+    let targets = targets();
+    let opener = test_utils::document()
+        .create_element("button")
+        .expect("create opener");
+    opener.set_id("tour-opener");
+    test_utils::document()
+        .body()
+        .unwrap()
+        .append_child(&opener)
+        .expect("attach opener");
+    opener
+        .dyn_ref::<web_sys::HtmlElement>()
+        .unwrap()
+        .focus()
+        .expect("focus opener");
+
+    let active = signal(false);
+    let tour = Tour::create(TourProps {
+        steps: steps(),
+        active: active.clone(),
+        ..Default::default()
+    });
+    test_utils::document()
+        .body()
+        .unwrap()
+        .append_child(&tour)
+        .expect("attach tour");
+    active.set(true);
+    settle().await;
+
+    let bubble = tour.query_selector(".domius-tour-step").unwrap().unwrap();
+    assert_eq!(
+        bubble.get_attribute("aria-describedby"),
+        bubble
+            .query_selector(".domius-tour-description")
+            .unwrap()
+            .unwrap()
+            .get_attribute("id")
+    );
+    assert_eq!(
+        test_utils::document()
+            .active_element()
+            .unwrap()
+            .get_attribute("data-action")
+            .as_deref(),
+        Some("next")
+    );
+
+    let next = action(&tour, "next").unwrap();
+    next.dyn_ref::<web_sys::HtmlElement>()
+        .unwrap()
+        .focus()
+        .unwrap();
+    test_utils::simulate_key_press(&next, "Tab");
+    assert_eq!(
+        test_utils::document()
+            .active_element()
+            .unwrap()
+            .get_attribute("data-action")
+            .as_deref(),
+        Some("skip"),
+        "Tab from the last action should wrap to the first"
+    );
+
+    click(&action(&tour, "skip").unwrap());
+    settle().await;
+    assert_eq!(
+        test_utils::document()
+            .active_element()
+            .map(|element| element.id()),
+        Some("tour-opener".to_string())
+    );
+
+    tour.remove();
+    opener.remove();
+    drop_targets(&targets);
+}

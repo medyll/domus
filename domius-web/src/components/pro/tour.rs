@@ -1,16 +1,29 @@
 //! Tour component - User onboarding guide.
 
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use domius_core::signal::Signal;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{Document, Element};
+use web_sys::{Document, Element, HtmlElement};
 
 use crate::disposal::ViewScope;
 
 /// Attribute set on the element a step points at, while that step is showing.
 pub const TARGET_ATTRIBUTE: &str = "data-tour-target";
+
+thread_local! {
+    static TOUR_SEQUENCE: Cell<u32> = const { Cell::new(0) };
+}
+
+fn next_tour_id() -> String {
+    TOUR_SEQUENCE.with(|sequence| {
+        let next = sequence.get().wrapping_add(1);
+        sequence.set(next);
+        format!("domius-tour-{next}")
+    })
+}
 
 /// Tour step.
 #[derive(Clone)]
@@ -150,6 +163,8 @@ impl Tour {
             classes.push(class);
         }
         root.set_class_name(&classes.join(" "));
+        let tour_id = next_tour_id();
+        root.set_id(&tour_id);
         root.set_attribute("data-steps", &props.steps.len().to_string())
             .expect("set tour length");
 
@@ -188,6 +203,7 @@ impl Tour {
             handler.forget();
         }
         listen_for_escape(&root, Rc::clone(&controls));
+        trap_focus(&root);
 
         // The tour owns its scope, so removing the overlay stops it following
         // the signals it was built on.
@@ -198,8 +214,16 @@ impl Tour {
         let active = props.active;
         let current_step = props.current_step;
         let root_for_effect = root.clone();
+        let was_showing = Rc::new(Cell::new(false));
+        let previous_focus = Rc::new(RefCell::new(None::<HtmlElement>));
         scope.effect(move || {
             let showing = active.get() && !steps.is_empty();
+            let previously_showing = was_showing.replace(showing);
+            if showing && !previously_showing {
+                *previous_focus.borrow_mut() = document
+                    .active_element()
+                    .and_then(|element| element.dyn_into::<HtmlElement>().ok());
+            }
             let index = current_step.get().min(steps.len().saturating_sub(1));
             root_for_effect
                 .set_attribute("data-active", &showing.to_string())
@@ -212,6 +236,11 @@ impl Tour {
                 root_for_effect
                     .remove_attribute("data-step")
                     .expect("clear tour step");
+                if previously_showing {
+                    if let Some(element) = previous_focus.borrow_mut().take() {
+                        element.focus().ok();
+                    }
+                }
                 return;
             }
 
@@ -235,7 +264,9 @@ impl Tour {
                 show_arrows,
                 show_indicators,
                 &controls,
+                &tour_id,
             );
+            focus_primary_action(&root_for_effect, &bubble);
         });
 
         root
@@ -252,10 +283,11 @@ fn fill_bubble(
     show_arrows: bool,
     show_indicators: bool,
     controls: &Rc<Controls>,
+    tour_id: &str,
 ) {
     let title = document.create_element("h2").expect("create tour title");
     title.set_class_name("domius-tour-title");
-    let title_id = format!("domius-tour-title-{index}");
+    let title_id = format!("{tour_id}-title-{index}");
     title.set_id(&title_id);
     title.set_text_content(Some(&step.title));
     bubble.append_child(&title).expect("append tour title");
@@ -267,10 +299,15 @@ fn fill_bubble(
         .create_element("p")
         .expect("create tour description");
     description.set_class_name("domius-tour-description");
+    let description_id = format!("{tour_id}-description-{index}");
+    description.set_id(&description_id);
     description.set_text_content(Some(&step.description));
     bubble
         .append_child(&description)
         .expect("append tour description");
+    bubble
+        .set_attribute("aria-describedby", &description_id)
+        .expect("describe tour step");
 
     if show_indicators {
         let indicators = document
@@ -364,6 +401,75 @@ fn listen_for_escape(root: &Element, controls: Rc<Controls>) {
     root.add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref())
         .expect("listen for tour escape");
     handler.forget();
+}
+
+/// Keep keyboard navigation inside the modal while it is open.
+fn trap_focus(root: &Element) {
+    let watched = root.clone();
+    let handler =
+        Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(move |event: web_sys::KeyboardEvent| {
+            if event.key() != "Tab" || watched.has_attribute("hidden") {
+                return;
+            }
+            let focusable = watched
+                .query_selector_all("button:not([disabled])")
+                .expect("query tour actions");
+            let Some(first) = focusable
+                .item(0)
+                .and_then(|node| node.dyn_into::<HtmlElement>().ok())
+            else {
+                return;
+            };
+            let Some(last) = focusable
+                .item(focusable.length().saturating_sub(1))
+                .and_then(|node| node.dyn_into::<HtmlElement>().ok())
+            else {
+                return;
+            };
+            let active = web_sys::window()
+                .and_then(|window| window.document())
+                .and_then(|document| document.active_element());
+            let wrap_back = event.shift_key()
+                && active
+                    .as_ref()
+                    .map_or(true, |active| active.is_same_node(Some(&first)));
+            let wrap_forward = !event.shift_key()
+                && active
+                    .as_ref()
+                    .map_or(true, |active| active.is_same_node(Some(&last)));
+            if wrap_back || wrap_forward {
+                event.prevent_default();
+                if wrap_back {
+                    last.focus().ok();
+                } else {
+                    first.focus().ok();
+                }
+            }
+        });
+    root.add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref())
+        .expect("trap tour focus");
+    handler.forget();
+}
+
+/// Focus after the component has been attached and the reactive paint landed.
+fn focus_primary_action(root: &Element, bubble: &Element) {
+    let root = root.clone();
+    let bubble = bubble.clone();
+    let focus = Closure::once_into_js(move || {
+        if root.get_attribute("data-active").as_deref() != Some("true") {
+            return;
+        }
+        if let Ok(Some(action)) =
+            bubble.query_selector("[data-action='next'], [data-action='finish']")
+        {
+            if let Some(action) = action.dyn_ref::<HtmlElement>() {
+                action.focus().ok();
+            }
+        }
+    });
+    if let Some(window) = web_sys::window() {
+        window.request_animation_frame(focus.unchecked_ref()).ok();
+    }
 }
 
 fn mark_target(document: &Document, target_id: &str) {
