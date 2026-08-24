@@ -3,15 +3,14 @@ use std::collections::BTreeMap;
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
 use domius_web::components::pro::data_grid::{DataGrid, DataGridProps, GridColumn};
-use domius_web::components::pro::heatmap::{
-    Heatmap, HeatmapCell, HeatmapColorScale, HeatmapProps,
-};
+use domius_web::components::pro::heatmap::{Heatmap, HeatmapCell, HeatmapColorScale, HeatmapProps};
 use domius_web::components::pro::pivot_table::{
     Aggregator, PivotData, PivotTable, PivotTableProps,
 };
+use domius_web::components::pro::scatter_plot::{ScatterPlot, ScatterPlotProps, ScatterPoint};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
-use crate::data::{Incident, IncidentSeverity, Metric, Service};
+use crate::data::{Incident, IncidentSeverity, Metric, Service, ServiceStatus};
 use crate::state::MonitoringContext;
 
 pub struct ReportsPage;
@@ -90,6 +89,11 @@ impl DomiusComponent for ReportsPage {
                     p { "Average error percentage by service and 10-minute window" }
                     div(id: "error-heatmap") { }
                 }
+                section(class: "panel") {
+                    h2 { "Throughput against error rate" }
+                    p { "One point per service and 10-minute window, sized by open incidents" }
+                    div(id: "correlation-scatter") { }
+                }
             }
         };
 
@@ -166,7 +170,84 @@ impl DomiusComponent for ReportsPage {
             .expect("error heatmap host")
             .append_child(&error_heatmap(&state.services, &state.metrics))
             .expect("append error heatmap");
+        root.query_selector("#correlation-scatter")
+            .expect("query correlation scatter")
+            .expect("correlation scatter host")
+            .append_child(&correlation_scatter(
+                &state.services,
+                &state.incidents,
+                &state.metrics,
+            ))
+            .expect("append correlation scatter");
         root
+    }
+}
+
+fn correlation_scatter(
+    services: &[Service],
+    incidents: &[Incident],
+    metrics: &[Metric],
+) -> web_sys::Element {
+    ScatterPlot::create(ScatterPlotProps {
+        points: correlation_points(services, incidents, metrics),
+        x_label: Some("Requests per second".to_string()),
+        y_label: Some("Error rate %".to_string()),
+        // Anchor the error axis at zero so quiet windows read as quiet.
+        y_min: Some(0.0),
+        show_grid: true,
+        show_labels: false,
+        class: Some("report-scatter".to_string()),
+        ..Default::default()
+    })
+}
+
+/// Correlate throughput and error rate over the same 10-minute windows as the heatmap.
+fn correlation_points(
+    services: &[Service],
+    incidents: &[Incident],
+    metrics: &[Metric],
+) -> Vec<ScatterPoint> {
+    services
+        .iter()
+        .flat_map(|service| {
+            let open = incidents
+                .iter()
+                .filter(|incident| incident.service_id == service.id && !incident.acknowledged)
+                .count();
+            (0..6).map(move |window| {
+                let sample = metrics
+                    .iter()
+                    .filter(|metric| {
+                        metric.service_id == service.id && metric.minute / 10 == window
+                    })
+                    .collect::<Vec<_>>();
+                let divisor = sample.len().max(1) as f64;
+                ScatterPoint {
+                    x: sample
+                        .iter()
+                        .map(|metric| f64::from(metric.requests_per_second))
+                        .sum::<f64>()
+                        / divisor,
+                    y: sample.iter().map(|metric| metric.error_rate).sum::<f64>() / divisor,
+                    label: Some(format!(
+                        "{} {:02}-{:02} min",
+                        service.name,
+                        window * 10,
+                        window * 10 + 9
+                    )),
+                    color: Some(status_token(service.status).to_string()),
+                    size: Some(4.0 + open.min(6) as f64),
+                }
+            })
+        })
+        .collect()
+}
+
+fn status_token(status: ServiceStatus) -> &'static str {
+    match status {
+        ServiceStatus::Operational => "healthy",
+        ServiceStatus::Degraded => "warning",
+        ServiceStatus::Outage => "critical",
     }
 }
 
@@ -176,7 +257,10 @@ fn error_heatmap(services: &[Service], metrics: &[Metric]) -> web_sys::Element {
         x_labels: (0..6)
             .map(|window| format!("{:02}-{:02} min", window * 10, window * 10 + 9))
             .collect(),
-        y_labels: services.iter().map(|service| service.name.clone()).collect(),
+        y_labels: services
+            .iter()
+            .map(|service| service.name.clone())
+            .collect(),
         color_scale: HeatmapColorScale::Sequential(vec![
             "healthy".to_string(),
             "watch".to_string(),
@@ -197,7 +281,9 @@ fn heatmap_data(services: &[Service], metrics: &[Metric]) -> Vec<HeatmapCell> {
             (0..6).map(move |x| {
                 let window = metrics
                     .iter()
-                    .filter(|metric| metric.service_id == service.id && metric.minute / 10 == x as u32)
+                    .filter(|metric| {
+                        metric.service_id == service.id && metric.minute / 10 == x as u32
+                    })
                     .collect::<Vec<_>>();
                 HeatmapCell {
                     x,
@@ -242,9 +328,16 @@ fn metric_pivot_data(services: &[Service], metrics: &[Metric]) -> Vec<PivotData>
                 ),
                 (
                     "window".to_string(),
-                    format!("{:02}-{:02} min", metric.minute / 20 * 20, metric.minute / 20 * 20 + 19),
+                    format!(
+                        "{:02}-{:02} min",
+                        metric.minute / 20 * 20,
+                        metric.minute / 20 * 20 + 19
+                    ),
                 ),
-                ("throughput".to_string(), metric.requests_per_second.to_string()),
+                (
+                    "throughput".to_string(),
+                    metric.requests_per_second.to_string(),
+                ),
             ]
             .into_iter()
             .collect()
@@ -401,11 +494,46 @@ mod tests {
                 .iter()
                 .map(|row| row["window"].as_str())
                 .collect::<std::collections::BTreeSet<_>>(),
-            ["00-19 min", "20-39 min", "40-59 min"].into_iter().collect()
+            ["00-19 min", "20-39 min", "40-59 min"]
+                .into_iter()
+                .collect()
         );
         assert_eq!(
             severities.iter().map(|point| point.value).sum::<f64>(),
             48.0
+        );
+    }
+
+    #[test]
+    fn correlation_reads_the_same_windows_as_the_heatmap() {
+        let data = monitoring_fixture(7);
+        let points = correlation_points(&data.services, &data.incidents, &data.metrics);
+        let cells = heatmap_data(&data.services, &data.metrics);
+        assert_eq!(points.len(), 36);
+        assert_eq!(points.len(), cells.len());
+
+        // Both views average the same measurements over the same windows.
+        for (point, cell) in points.iter().zip(&cells) {
+            assert!((point.y - cell.value).abs() < f64::EPSILON);
+        }
+
+        assert!(points.iter().all(|point| point.x > 0.0));
+        assert!(points
+            .iter()
+            .all(|point| point.size.unwrap_or_default() >= 4.0));
+        assert_eq!(
+            points[0].label.as_deref(),
+            Some(format!("{} 00-09 min", data.services[0].name).as_str())
+        );
+        assert_eq!(
+            points
+                .iter()
+                .filter_map(|point| point.color.clone())
+                .collect::<std::collections::BTreeSet<_>>(),
+            ["critical", "healthy", "warning"]
+                .into_iter()
+                .map(str::to_string)
+                .collect()
         );
     }
 }
