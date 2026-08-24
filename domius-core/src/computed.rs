@@ -6,6 +6,7 @@
 ///
 /// This is the standard pattern for derived/memo values in reactive systems.
 use crate::effect::create_effect;
+use crate::scope::{create_effect_in_scope, ScopeId};
 use crate::signal::{signal, Signal};
 
 /// A lazily-evaluated reactive value.
@@ -34,6 +35,17 @@ impl<T: Clone + 'static> Computed<T> {
         Self { value }
     }
 
+    /// Create a computed value whose internal effect belongs to `scope_id`.
+    ///
+    /// Disposing the scope unsubscribes the computation from every source it
+    /// observed. `None` means the scope was already gone.
+    pub fn new_in_scope<F: FnMut() -> T + 'static>(scope_id: ScopeId, mut f: F) -> Option<Self> {
+        let value = signal(f());
+        let value_clone = value.clone();
+        create_effect_in_scope(scope_id, move || value_clone.set(f()))?;
+        Some(Self { value })
+    }
+
     /// Get the current computed value, registering the running effect as a subscriber.
     pub fn get(&self) -> T {
         self.value.get()
@@ -51,6 +63,14 @@ impl<T: Clone + 'static> Clone for Computed<T> {
 /// Convenience constructor for computed values.
 pub fn computed<T: Clone + 'static, F: FnMut() -> T + 'static>(f: F) -> Computed<T> {
     Computed::new(f)
+}
+
+/// Create a computed value disposed together with a reactive scope.
+pub fn computed_in_scope<T: Clone + 'static, F: FnMut() -> T + 'static>(
+    scope_id: ScopeId,
+    f: F,
+) -> Option<Computed<T>> {
+    Computed::new_in_scope(scope_id, f)
 }
 
 #[cfg(test)]
@@ -153,5 +173,32 @@ mod tests {
         source.set(2);
         assert_eq!(*eval_count.borrow(), 3);
         assert_eq!(*reads.borrow(), vec![2, 2, 4, 4]);
+    }
+
+    #[test]
+    fn scoped_computed_stops_evaluating_after_disposal() {
+        use crate::scope::{create_scope, dispose_scope};
+
+        let source = signal(1);
+        let evaluations = Rc::new(RefCell::new(0));
+        let scope = create_scope(None);
+        let watched = source.clone();
+        let counted = Rc::clone(&evaluations);
+        let computed = computed_in_scope(scope, move || {
+            *counted.borrow_mut() += 1;
+            watched.get() * 2
+        })
+        .expect("scope should be alive");
+
+        assert_eq!(computed.get(), 2);
+        source.set(2);
+        assert_eq!(computed.get(), 4);
+        let before_disposal = *evaluations.borrow();
+
+        dispose_scope(scope);
+        source.set(3);
+
+        assert_eq!(*evaluations.borrow(), before_disposal);
+        assert_eq!(computed.get(), 4);
     }
 }
