@@ -1,3 +1,4 @@
+pub mod aggregates;
 pub mod fixtures;
 pub mod model;
 

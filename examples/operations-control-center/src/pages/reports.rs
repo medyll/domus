@@ -14,8 +14,18 @@ use domius_web::components::pro::watermark::{Watermark, WatermarkProps};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
 
 use crate::components::mark_route_links;
+use crate::data::aggregates::{
+    error_rate_by_service as average_error_by_service, error_rate_windows,
+    throughput_by_minute as fleet_throughput, throughput_windows, window_count, window_label,
+};
 use crate::data::{Incident, IncidentSeverity, Metric, Service, ServiceStatus};
 use crate::state::MonitoringContext;
+
+/// Minutes covered by one column of the activity map.
+const REPORT_WINDOW: u32 = 10;
+
+/// Minutes covered by one column of the pivot table.
+const PIVOT_WINDOW: u32 = 20;
 
 pub struct ReportsPage;
 
@@ -359,38 +369,27 @@ fn correlation_points(
     incidents: &[Incident],
     metrics: &[Metric],
 ) -> Vec<ScatterPoint> {
-    services
-        .iter()
-        .flat_map(|service| {
+    let throughput = throughput_windows(services, metrics, REPORT_WINDOW);
+    error_rate_windows(services, metrics, REPORT_WINDOW)
+        .into_iter()
+        .zip(throughput)
+        .map(|((window, index, error_rate), (.., requests))| {
+            let service = &services[index];
             let open = incidents
                 .iter()
                 .filter(|incident| incident.service_id == service.id && !incident.acknowledged)
                 .count();
-            (0..6).map(move |window| {
-                let sample = metrics
-                    .iter()
-                    .filter(|metric| {
-                        metric.service_id == service.id && metric.minute / 10 == window
-                    })
-                    .collect::<Vec<_>>();
-                let divisor = sample.len().max(1) as f64;
-                ScatterPoint {
-                    x: sample
-                        .iter()
-                        .map(|metric| f64::from(metric.requests_per_second))
-                        .sum::<f64>()
-                        / divisor,
-                    y: sample.iter().map(|metric| metric.error_rate).sum::<f64>() / divisor,
-                    label: Some(format!(
-                        "{} {:02}-{:02} min",
-                        service.name,
-                        window * 10,
-                        window * 10 + 9
-                    )),
-                    color: Some(status_token(service.status).to_string()),
-                    size: Some(4.0 + open.min(6) as f64),
-                }
-            })
+            ScatterPoint {
+                x: requests,
+                y: error_rate,
+                label: Some(format!(
+                    "{} {}",
+                    service.name,
+                    window_label(window, REPORT_WINDOW)
+                )),
+                color: Some(status_token(service.status).to_string()),
+                size: Some(4.0 + open.min(6) as f64),
+            }
         })
         .collect()
 }
@@ -406,8 +405,8 @@ fn status_token(status: ServiceStatus) -> &'static str {
 fn error_heatmap(services: &[Service], metrics: &[Metric]) -> web_sys::Element {
     Heatmap::create(HeatmapProps {
         data: heatmap_data(services, metrics),
-        x_labels: (0..6)
-            .map(|window| format!("{:02}-{:02} min", window * 10, window * 10 + 9))
+        x_labels: (0..window_count(metrics, REPORT_WINDOW))
+            .map(|window| window_label(window, REPORT_WINDOW))
             .collect(),
         y_labels: services
             .iter()
@@ -426,25 +425,9 @@ fn error_heatmap(services: &[Service], metrics: &[Metric]) -> web_sys::Element {
 }
 
 fn heatmap_data(services: &[Service], metrics: &[Metric]) -> Vec<HeatmapCell> {
-    services
-        .iter()
-        .enumerate()
-        .flat_map(|(y, service)| {
-            (0..6).map(move |x| {
-                let window = metrics
-                    .iter()
-                    .filter(|metric| {
-                        metric.service_id == service.id && metric.minute / 10 == x as u32
-                    })
-                    .collect::<Vec<_>>();
-                HeatmapCell {
-                    x,
-                    y,
-                    value: window.iter().map(|metric| metric.error_rate).sum::<f64>()
-                        / window.len().max(1) as f64,
-                }
-            })
-        })
+    error_rate_windows(services, metrics, REPORT_WINDOW)
+        .into_iter()
+        .map(|(x, y, value)| HeatmapCell { x, y, value })
         .collect()
 }
 
@@ -480,11 +463,7 @@ fn metric_pivot_data(services: &[Service], metrics: &[Metric]) -> Vec<PivotData>
                 ),
                 (
                     "window".to_string(),
-                    format!(
-                        "{:02}-{:02} min",
-                        metric.minute / 20 * 20,
-                        metric.minute / 20 * 20 + 19
-                    ),
+                    window_label((metric.minute / PIVOT_WINDOW) as usize, PIVOT_WINDOW),
                 ),
                 (
                     "throughput".to_string(),
@@ -575,11 +554,7 @@ fn append_chart(root: &web_sys::Element, selector: &str, props: ChartsProps) {
 }
 
 fn throughput_by_minute(metrics: &[Metric]) -> Vec<ChartDataPoint> {
-    let mut totals = BTreeMap::<u32, u32>::new();
-    for metric in metrics {
-        *totals.entry(metric.minute).or_default() += metric.requests_per_second;
-    }
-    totals
+    fleet_throughput(metrics)
         .into_iter()
         .map(|(minute, value)| ChartDataPoint {
             label: format!("Minute {minute}"),
@@ -589,23 +564,9 @@ fn throughput_by_minute(metrics: &[Metric]) -> Vec<ChartDataPoint> {
 }
 
 fn error_rate_by_service(services: &[Service], metrics: &[Metric]) -> Vec<ChartDataPoint> {
-    services
-        .iter()
-        .map(|service| {
-            let service_metrics = metrics
-                .iter()
-                .filter(|metric| metric.service_id == service.id)
-                .collect::<Vec<_>>();
-            let average = service_metrics
-                .iter()
-                .map(|metric| metric.error_rate)
-                .sum::<f64>()
-                / service_metrics.len().max(1) as f64;
-            ChartDataPoint {
-                label: service.name.clone(),
-                value: average,
-            }
-        })
+    average_error_by_service(services, metrics)
+        .into_iter()
+        .map(|(label, value)| ChartDataPoint { label, value })
         .collect()
 }
 
