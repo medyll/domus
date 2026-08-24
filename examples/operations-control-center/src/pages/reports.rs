@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
 use domius_web::components::data::statistic::{statistic_card, StatisticCardProps, StatisticProps};
+use domius_web::components::primitives::qrcode::{qrcode, QRCodeErrorLevel, QRCodeProps};
 use domius_web::components::pro::data_grid::{DataGrid, DataGridProps, GridColumn};
 use domius_web::components::pro::heatmap::{Heatmap, HeatmapCell, HeatmapColorScale, HeatmapProps};
 use domius_web::components::pro::pivot_table::{
@@ -154,6 +155,14 @@ impl DomiusComponent for ReportsPage {
                         p { "One point per service and 10-minute window, sized by open incidents" }
                         div(id: "correlation-scatter") { }
                     }
+                    section(class: "panel") {
+                        h2 { "Reopen this report" }
+                        p {
+                            "Scan to reach "
+                            code(id: "report-url") { }
+                        }
+                        div(id: "report-qrcode") { }
+                    }
                 }
             }
         };
@@ -240,9 +249,38 @@ impl DomiusComponent for ReportsPage {
                 &state.metrics,
             ))
             .expect("append correlation scatter");
+        append_report_code(&root, &report_url());
         mark_export_region(&root);
         root
     }
+}
+
+/// Where this report lives right now, so a printed copy leads back to it.
+fn report_url() -> String {
+    web_sys::window()
+        .and_then(|window| window.location().origin().ok())
+        .map(|origin| format!("{origin}{}", ReportsPage::route()))
+        .unwrap_or_else(|| ReportsPage::route().to_string())
+}
+
+/// Show the report URL and encode that exact string, so the two cannot drift.
+fn append_report_code(root: &web_sys::Element, url: &str) {
+    root.query_selector("#report-url")
+        .expect("query report url")
+        .expect("report url host")
+        .set_text_content(Some(url));
+    root.query_selector("#report-qrcode")
+        .expect("query report qrcode")
+        .expect("report qrcode host")
+        .append_child(&qrcode(QRCodeProps {
+            value: url.to_string(),
+            size: 180,
+            error_level: QRCodeErrorLevel::Quartile,
+            include_margin: true,
+            class: Some("report-code".to_string()),
+            ..Default::default()
+        }))
+        .expect("append report qrcode");
 }
 
 /// Wrap a result state in the page frame so navigation and titles stay in place.
