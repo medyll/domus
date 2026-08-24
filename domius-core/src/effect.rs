@@ -55,9 +55,15 @@ impl Effect {
 
     /// Execute the effect once (without changing the TLS context).
     pub fn execute(&self) {
-        if let Some(mut f) = self.execute_fn.take() {
+        let Some(f) = self.execute_fn.take() else {
+            return;
+        };
+        let mut guard = ClosureGuard {
+            effect: self,
+            closure: Some(f),
+        };
+        if let Some(f) = guard.closure.as_mut() {
             f();
-            self.execute_fn.set(Some(f));
         }
     }
 
@@ -76,6 +82,20 @@ impl Effect {
 
         // Re-run the effect with TLS tracking to establish fresh dependencies
         Self::run(effect);
+    }
+}
+
+/// Restores a temporarily extracted closure, including during unwinding.
+struct ClosureGuard<'a> {
+    effect: &'a Effect,
+    closure: Option<Box<dyn FnMut()>>,
+}
+
+impl Drop for ClosureGuard<'_> {
+    fn drop(&mut self) {
+        if let Some(closure) = self.closure.take() {
+            self.effect.execute_fn.set(Some(closure));
+        }
     }
 }
 
@@ -153,6 +173,28 @@ mod tests {
 
         source.set(1);
         assert_eq!(*runs.borrow(), vec![0, 1]);
+    }
+
+    #[test]
+    fn a_panicking_manual_execution_can_run_again() {
+        let runs = Rc::new(Cell::new(0));
+        let recorded = Rc::clone(&runs);
+        let effect = Effect::new(move || recorded.set(recorded.get() + 1));
+
+        let should_panic = Rc::new(Cell::new(true));
+        let flag = Rc::clone(&should_panic);
+        let manual_runs = Rc::clone(&runs);
+        effect.execute_fn.set(Some(Box::new(move || {
+            manual_runs.set(manual_runs.get() + 1);
+            if flag.replace(false) {
+                panic!("first manual execution gives up");
+            }
+        })));
+
+        let first = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| effect.execute()));
+        assert!(first.is_err());
+        effect.execute();
+        assert_eq!(runs.get(), 3);
     }
 
     #[test]
