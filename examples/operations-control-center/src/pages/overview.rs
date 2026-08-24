@@ -1,4 +1,4 @@
-use domius_core::computed::{computed, Computed};
+use domius_core::computed::computed_in_scope;
 use domius_core::signal::{signal, Signal};
 use domius_web::components::data::badge::{Badge, BadgeProps, BadgeVariant};
 use domius_web::components::data::charts::{ChartDataPoint, ChartType, Charts, ChartsProps};
@@ -28,8 +28,6 @@ pub struct OverviewPage;
 
 pub struct OverviewState {
     data: Signal<MonitoringData>,
-    open_incidents: Computed<usize>,
-    impacted_services: Computed<usize>,
 }
 
 impl DomiusComponent for OverviewPage {
@@ -38,21 +36,7 @@ impl DomiusComponent for OverviewPage {
 
     fn setup(_: Self::Props) -> Self::State {
         let context = MonitoringContext::current().expect("monitoring context is missing");
-        let incident_data = context.data.clone();
-        let service_data = context.data.clone();
-
-        OverviewState {
-            data: context.data,
-            open_incidents: computed(move || incident_data.get().open_incident_count()),
-            impacted_services: computed(move || {
-                service_data
-                    .get()
-                    .services
-                    .iter()
-                    .filter(|service| service.status != ServiceStatus::Operational)
-                    .count()
-            }),
-        }
+        OverviewState { data: context.data }
     }
 
     fn render(state: &Self::State) -> DomiusNode {
@@ -70,11 +54,24 @@ impl DomiusComponent for OverviewPage {
         let body = host(&page, "#overview-body");
         let ready = signal(false);
         let data = state.data.clone();
-        let open_incidents = state.open_incidents.clone();
-        let impacted_services = state.impacted_services.clone();
         let filled = body.clone();
         let watched = ready.clone();
         let scope = ViewScope::attach(&page);
+        let incident_data = state.data.clone();
+        let open_incidents = computed_in_scope(scope.id(), move || {
+            incident_data.get().open_incident_count()
+        })
+        .expect("overview scope should be alive");
+        let service_data = state.data.clone();
+        let impacted_services = computed_in_scope(scope.id(), move || {
+            service_data
+                .get()
+                .services
+                .iter()
+                .filter(|service| service.status != ServiceStatus::Operational)
+                .count()
+        })
+        .expect("overview scope should be alive");
         scope.effect(move || {
             let loaded = watched.get();
             filled.set_text_content(None);
