@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::cell::Cell;
 
 use domius_web::{domus, DomiusComponent, DomiusPage};
 use wasm_bindgen::closure::Closure;
@@ -36,24 +36,13 @@ pub fn mount() -> Result<(), JsValue> {
             .replace_state_with_url(&JsValue::NULL, "", Some(&path))?;
     }
 
+    install_navigation(&document)?;
     render_path(&host, &path)
 }
 
 fn render_path(host: &Element, path: &str) -> Result<(), JsValue> {
     host.set_text_content(None);
-    let host_for_navigation = host.clone();
-    let navigate: Rc<dyn Fn(String)> = Rc::new(move |target: String| {
-        if let Some(window) = web_sys::window() {
-            let _ = window
-                .history()
-                .and_then(|history| history.push_state_with_url(&JsValue::NULL, "", Some(&target)));
-            let _ = render_path(&host_for_navigation, &target);
-        }
-    });
-    let navigate_for_nav = Rc::clone(&navigate);
-    host.append_child(&app_navigation(path, move |target| {
-        navigate_for_nav(target);
-    }))?;
+    host.append_child(&app_navigation(path, move |target| navigate_to(&target, true)))?;
 
     let routes = router();
     let (route, params) = routes
@@ -91,35 +80,85 @@ fn render_path(host: &Element, path: &str) -> Result<(), JsValue> {
             not_found_view(path)
         }
     };
-    wire_route_links(&content, Rc::clone(&navigate));
     host.append_child(&content)?;
     Ok(())
 }
 
-fn wire_route_links(content: &Element, navigate: Rc<dyn Fn(String)>) {
-    let links = content
-        .query_selector_all("a[data-route]")
-        .expect("query internal route links");
-    for index in 0..links.length() {
-        let Some(link) = links
-            .item(index)
-            .and_then(|node| node.dyn_into::<Element>().ok())
+thread_local! {
+    static NAVIGATION_INSTALLED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Install one delegated listener for the application lifetime. This catches
+/// links produced by asynchronous effects as well as links present at mount.
+fn install_navigation(document: &web_sys::Document) -> Result<(), JsValue> {
+    if NAVIGATION_INSTALLED.with(Cell::get) {
+        return Ok(());
+    }
+
+    let click = Closure::<dyn FnMut(web_sys::MouseEvent)>::new(|event: web_sys::MouseEvent| {
+        if event.button() != 0
+            || event.alt_key()
+            || event.ctrl_key()
+            || event.meta_key()
+            || event.shift_key()
+        {
+            return;
+        }
+        let Some(link) = event
+            .target()
+            .and_then(|target| target.dyn_into::<Element>().ok())
+            .and_then(|target| target.closest("a[data-route]").ok().flatten())
         else {
-            continue;
+            return;
+        };
+        let Some(host) = web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.get_element_by_id("app"))
+        else {
+            return;
         };
         let Some(target) = link.get_attribute("href") else {
-            continue;
+            return;
         };
-        let callback = Rc::clone(&navigate);
-        let handler =
-            Closure::<dyn FnMut(web_sys::MouseEvent)>::new(move |event: web_sys::MouseEvent| {
-                event.prevent_default();
-                callback(target.clone());
-            });
-        link.add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
-            .expect("register internal route link");
-        handler.forget();
+        if host.contains(Some(&link)) && target.starts_with('/') {
+            event.prevent_default();
+            navigate_to(&target, true);
+        }
+    });
+    document.add_event_listener_with_callback("click", click.as_ref().unchecked_ref())?;
+    click.forget();
+
+    let popstate = Closure::<dyn FnMut(web_sys::Event)>::new(|_| {
+        if let Some(window) = web_sys::window() {
+            if let Ok(path) = window.location().pathname() {
+                navigate_to(&path, false);
+            }
+        }
+    });
+    web_sys::window()
+        .ok_or_else(|| JsValue::from_str("window unavailable"))?
+        .add_event_listener_with_callback("popstate", popstate.as_ref().unchecked_ref())?;
+    popstate.forget();
+    NAVIGATION_INSTALLED.with(|installed| installed.set(true));
+    Ok(())
+}
+
+fn navigate_to(target: &str, push: bool) {
+    let Some(window) = web_sys::window() else {
+        return;
+    };
+    let Some(host) = window
+        .document()
+        .and_then(|document| document.get_element_by_id("app"))
+    else {
+        return;
+    };
+    if push {
+        let _ = window
+            .history()
+            .and_then(|history| history.push_state_with_url(&JsValue::NULL, "", Some(target)));
     }
+    let _ = render_path(&host, target);
 }
 
 /// Render an unknown route as a result the reader can act on, not a dead end.

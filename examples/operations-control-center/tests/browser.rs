@@ -8,7 +8,6 @@ use std::rc::Rc;
 use domius_core::create_effect;
 use domius_core::signal::signal;
 use domius_web::context::clear_all_contexts;
-use domius_web::disposal::ViewScope;
 use operations_control_center::app;
 use operations_control_center::data::monitoring_fixture;
 use operations_control_center::state::{Acknowledgement, FilterContext};
@@ -120,29 +119,48 @@ fn change(selector: &str, value: &str) {
 // 1. Following a link changes the route, the title and the content, without a
 //    full reload.
 //
-//    The hop is to /incidents rather than to a service because pushing a
-//    two-segment path breaks the test harness, which serves and polls itself
-//    from the root. The parameterised route is covered by the test below, which
-//    starts there instead of navigating to it; the transition itself was also
-//    checked by hand in Firefox.
 #[wasm_bindgen_test]
 async fn following_a_link_changes_the_view_in_place() {
     boot("/overview").await;
     assert_eq!(document().title(), "Operations overview | Domius");
     let overview = expect("main.operations-overview");
 
-    click(&expect("a[href='/incidents']"));
+    click(&expect("#service-health a[href='/services/svc-01']"));
     settle().await;
 
     assert_eq!(
         web_sys::window().unwrap().location().pathname().unwrap(),
-        "/incidents"
+        "/services/svc-01"
     );
-    assert_eq!(document().title(), "Incident command | Domius");
-    assert!(query("main.incidents-page").is_some());
+    assert_eq!(document().title(), "Gateway service | Domius");
+    assert!(query("main.service-detail").is_some());
     assert!(query("main.operations-overview").is_none());
     // The old view left the document rather than the document being rebuilt.
     assert!(!overview.is_connected());
+}
+
+#[wasm_bindgen_test]
+async fn browser_history_restores_the_previous_view() {
+    boot("/overview").await;
+    click(&expect("a[href='/incidents']"));
+    settle().await;
+    assert!(query("main.incidents-page").is_some());
+
+    web_sys::window()
+        .unwrap()
+        .history()
+        .unwrap()
+        .back()
+        .expect("go back");
+    settle().await;
+
+    assert_eq!(
+        web_sys::window().unwrap().location().pathname().unwrap(),
+        "/overview"
+    );
+    assert_eq!(document().title(), "Operations overview | Domius");
+    assert!(query("main.operations-overview").is_some());
+    assert!(query("main.incidents-page").is_none());
 }
 
 // 1b. A route parameter reaches the page that reads it.
