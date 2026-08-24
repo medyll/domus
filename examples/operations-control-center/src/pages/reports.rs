@@ -7,6 +7,7 @@ use domius_web::components::pro::heatmap::{Heatmap, HeatmapCell, HeatmapColorSca
 use domius_web::components::pro::pivot_table::{
     Aggregator, PivotData, PivotTable, PivotTableProps,
 };
+use domius_web::components::pro::result::{Result, ResultAction, ResultProps, ResultStatus};
 use domius_web::components::pro::scatter_plot::{ScatterPlot, ScatterPlotProps, ScatterPoint};
 use domius_web::components::pro::watermark::{Watermark, WatermarkProps};
 use domius_web::{domus, DomiusComponent, DomiusNode, DomiusPage};
@@ -20,6 +21,33 @@ pub struct ReportsState {
     services: Vec<Service>,
     incidents: Vec<Incident>,
     metrics: Vec<Metric>,
+    status: ReportStatus,
+}
+
+/// Whether the loaded window can be reported on at all.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReportStatus {
+    Ready,
+    Empty,
+    Failed(String),
+}
+
+/// Reports are only as trustworthy as the window behind them, so decide up front.
+fn report_status(data: &crate::data::MonitoringData) -> ReportStatus {
+    if data.services.is_empty() || data.metrics.is_empty() {
+        return ReportStatus::Empty;
+    }
+    if let Some(orphan) = data
+        .metrics
+        .iter()
+        .find(|metric| data.service(&metric.service_id).is_none())
+    {
+        return ReportStatus::Failed(format!(
+            "A measurement references the unknown service {}.",
+            orphan.service_id
+        ));
+    }
+    ReportStatus::Ready
 }
 
 impl DomiusComponent for ReportsPage {
@@ -31,14 +59,43 @@ impl DomiusComponent for ReportsPage {
             .expect("monitoring context is missing")
             .data
             .get();
+        let status = report_status(&data);
         ReportsState {
             services: data.services,
             incidents: data.incidents,
             metrics: data.metrics,
+            status,
         }
     }
 
     fn render(state: &Self::State) -> DomiusNode {
+        match &state.status {
+            ReportStatus::Empty => {
+                return unavailable_report(Result::create(ResultProps {
+                    status: ResultStatus::Info,
+                    title: "No measurements in this window".to_string(),
+                    description: Some(
+                        "The monitoring window holds no metric, so no report can be built."
+                            .to_string(),
+                    ),
+                    actions: report_exits(),
+                    class: Some("report-empty".to_string()),
+                    ..Default::default()
+                }))
+            }
+            ReportStatus::Failed(reason) => {
+                return unavailable_report(Result::create(ResultProps {
+                    status: ResultStatus::Error,
+                    title: "Reports unavailable".to_string(),
+                    description: Some(reason.clone()),
+                    actions: report_exits(),
+                    class: Some("report-failure".to_string()),
+                    ..Default::default()
+                }))
+            }
+            ReportStatus::Ready => {}
+        }
+
         let throughput = throughput_by_minute(&state.metrics);
         let average_throughput = throughput.iter().map(|point| point.value).sum::<f64>()
             / throughput.len().max(1) as f64;
@@ -184,6 +241,50 @@ impl DomiusComponent for ReportsPage {
             .expect("append correlation scatter");
         mark_export_region(&root);
         root
+    }
+}
+
+/// Wrap a result state in the page frame so navigation and titles stay in place.
+fn unavailable_report(result: web_sys::Element) -> DomiusNode {
+    let root = domus! {
+        main(class: "reports-page") {
+            header(class: "section-header") {
+                h1 { "Reliability reports" }
+                p { "A 60-minute deterministic operational window" }
+            }
+            div(id: "report-state") { }
+        }
+    };
+    root.query_selector("#report-state")
+        .expect("query report state")
+        .expect("report state host")
+        .append_child(&result)
+        .expect("append report state");
+    mark_internal_links(&root);
+    root
+}
+
+/// Both dead ends offer the same two ways back into the application.
+fn report_exits() -> Vec<ResultAction> {
+    vec![
+        ResultAction::new("Back to overview", "/overview").primary(),
+        ResultAction::new("Open incidents", "/incidents"),
+    ]
+}
+
+/// Let the shell intercept these links instead of reloading the application.
+fn mark_internal_links(root: &web_sys::Element) {
+    let links = root
+        .query_selector_all(".domius-result-action")
+        .expect("query result actions");
+    for index in 0..links.length() {
+        if let Some(link) = links
+            .item(index)
+            .and_then(|node| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(node).ok())
+        {
+            link.set_attribute("data-route", "")
+                .expect("mark internal result link");
+        }
     }
 }
 
@@ -419,8 +520,12 @@ impl DomiusPage for ReportsPage {
         "/reports"
     }
 
-    fn title(_: &Self::State) -> String {
-        "Reliability reports | Domius".to_string()
+    fn title(state: &Self::State) -> String {
+        match state.status {
+            ReportStatus::Ready => "Reliability reports | Domius".to_string(),
+            ReportStatus::Empty => "No reportable measurements | Domius".to_string(),
+            ReportStatus::Failed(_) => "Reports unavailable | Domius".to_string(),
+        }
     }
 }
 
@@ -529,6 +634,29 @@ mod tests {
         assert_eq!(
             severities.iter().map(|point| point.value).sum::<f64>(),
             48.0
+        );
+    }
+
+    #[test]
+    fn the_seeded_window_is_reportable_but_a_broken_one_is_not() {
+        let data = monitoring_fixture(7);
+        assert_eq!(report_status(&data), ReportStatus::Ready);
+
+        let mut without_metrics = data.clone();
+        without_metrics.metrics.clear();
+        assert_eq!(report_status(&without_metrics), ReportStatus::Empty);
+
+        let mut without_services = data.clone();
+        without_services.services.clear();
+        assert_eq!(report_status(&without_services), ReportStatus::Empty);
+
+        let mut orphaned = data;
+        orphaned.metrics[12].service_id = "svc-99".to_string();
+        assert_eq!(
+            report_status(&orphaned),
+            ReportStatus::Failed(
+                "A measurement references the unknown service svc-99.".to_string()
+            )
         );
     }
 
