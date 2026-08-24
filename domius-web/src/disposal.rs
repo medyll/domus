@@ -19,7 +19,58 @@
 //!
 //! Components that create a scope must set the `data-domius-scope` attribute on
 //! their root element to the scope's numeric ID. The observer reads this
-//! attribute on removal and calls `dispose_scope`.
+//! attribute on removal and calls `dispose_scope`. Use [`ViewScope`] rather
+//! than writing the attribute by hand: it holds the two halves together.
+
+use domius_core::scope::{create_effect_in_scope, create_scope, dispose_scope, ScopeId};
+use web_sys::Element;
+
+/// Attribute the observer reads to find the scope a removed element owned.
+pub const SCOPE_ATTRIBUTE: &str = "data-domius-scope";
+
+/// A scope tied to the element that owns it.
+///
+/// Creating effects through a `ViewScope` rather than `create_effect` is what
+/// makes them stop when their element leaves the document: the scope id is
+/// stamped on the element, and the disposal observer reads it back on removal.
+///
+/// ```ignore
+/// let scope = ViewScope::attach(&root);
+/// scope.effect(move || render(count.get()));
+/// ```
+pub struct ViewScope {
+    id: ScopeId,
+}
+
+impl ViewScope {
+    /// Create a scope and mark `root` as its owner.
+    pub fn attach(root: &Element) -> Self {
+        Self::attach_within(root, None)
+    }
+
+    /// Create a scope nested inside `parent`, and mark `root` as its owner.
+    pub fn attach_within(root: &Element, parent: Option<ScopeId>) -> Self {
+        let id = create_scope(parent);
+        root.set_attribute(SCOPE_ATTRIBUTE, &id.value().to_string())
+            .expect("stamp scope on view root");
+        Self { id }
+    }
+
+    /// This scope's id, as stamped on its element.
+    pub fn id(&self) -> ScopeId {
+        self.id
+    }
+
+    /// Run `f` now and on every change, until the scope is disposed.
+    pub fn effect<F: FnMut() + 'static>(&self, f: F) {
+        create_effect_in_scope(self.id, f).expect("scope should still be alive");
+    }
+
+    /// Stop every effect in this scope without waiting for the observer.
+    pub fn dispose(self) {
+        dispose_scope(self.id);
+    }
+}
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
@@ -79,7 +130,7 @@ mod wasm {
     }
 
     fn try_dispose_element(element: &web_sys::Element) {
-        if let Some(scope_str) = element.get_attribute("data-domius-scope") {
+        if let Some(scope_str) = element.get_attribute(super::SCOPE_ATTRIBUTE) {
             if let Ok(scope_id) = scope_str.parse::<usize>() {
                 dispose_scope(ScopeId::from_numeric(scope_id));
             }
