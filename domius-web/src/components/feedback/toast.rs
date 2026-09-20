@@ -24,6 +24,7 @@ impl Default for ToastVariant {
 }
 
 impl ToastVariant {
+    /// Returns the CSS class applied to the toast for this variant.
     pub fn as_class(&self) -> &'static str {
         match self {
             ToastVariant::Info => "domius-toast-info",
@@ -33,6 +34,7 @@ impl ToastVariant {
         }
     }
 
+    /// Returns the glyph shown next to the toast message for this variant.
     pub fn as_icon(&self) -> &'static str {
         match self {
             ToastVariant::Info => "ℹ",

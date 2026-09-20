@@ -22,14 +22,20 @@ pub struct Color {
 }
 
 impl Color {
+    /// Builds a color from its red, green, blue and alpha channels.
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
 
+    /// Formats the color as a `#rrggbb` string. The alpha channel is dropped.
     pub fn to_hex(&self) -> String {
         format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
     }
 
+    /// Parses a `#rrggbb` (or `rrggbb`) string into an opaque color.
+    ///
+    /// Returns `None` unless the input is exactly six hex digits: the shorthand
+    /// (`#abc`) and alpha (`#rrggbbaa`) forms are not accepted.
     pub fn from_hex(hex: &str) -> Option<Self> {
         let hex = hex.trim_start_matches('#');
         if hex.len() != 6 {

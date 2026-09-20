@@ -89,11 +89,14 @@ pub struct TestContainerGuard {
 }
 
 impl TestContainerGuard {
+    /// Creates the container element with the given id and takes ownership of it.
+    /// The element is removed from the DOM when the guard is dropped.
     pub fn new(id: &str) -> Self {
         let _ = create_test_container(id);
         Self { id: id.to_string() }
     }
 
+    /// Looks the guarded container up in the DOM, if it is still there.
     pub fn element(&self) -> Option<Element> {
         get_element_by_id(&self.id)
     }

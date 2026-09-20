@@ -115,6 +115,7 @@ fn build_todo_list(app: &Element) {
 // Entry point
 // ---------------------------------------------------------------------------
 
+/// Wasm entry point: boots Domius and mounts the demo widgets into `#app`.
 #[wasm_bindgen(start)]
 pub fn main() {
     domius_web::init();

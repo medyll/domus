@@ -35,6 +35,8 @@ impl Default for TextVariant {
 }
 
 impl TextVariant {
+    /// Returns the HTML tag this variant renders as (`span` for inline text,
+    /// `h1`..`h6` for headings).
     pub fn as_tag(&self) -> &'static str {
         match self {
             TextVariant::Body | TextVariant::Caption | TextVariant::Overline => "span",
@@ -48,6 +50,7 @@ impl TextVariant {
         }
     }
 
+    /// Returns the CSS class applied for this variant.
     pub fn as_class(&self) -> &'static str {
         match self {
             TextVariant::Body => "domius-text-body",
@@ -84,6 +87,7 @@ impl Default for TextColor {
 }
 
 impl TextColor {
+    /// Returns the CSS class applied for this color.
     pub fn as_class(&self) -> &'static str {
         match self {
             TextColor::Primary => "domius-text-primary",
@@ -144,6 +148,7 @@ impl Default for TextAlignment {
 }
 
 impl TextAlignment {
+    /// Returns the CSS class applied for this alignment.
     pub fn as_class(&self) -> &'static str {
         match self {
             TextAlignment::Left => "domius-text-left",

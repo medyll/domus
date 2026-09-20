@@ -56,6 +56,7 @@ web-sys = {{ version = "0.3", features = ["Window", "Document", "Element", "Node
 
 use wasm_bindgen::prelude::*;
 
+/// Wasm entry point: boots Domius and mounts the root component.
 #[wasm_bindgen(start)]
 pub fn main() {{
     domius_web::init();
@@ -72,6 +73,7 @@ pub fn main() {{
 //! Call `register_routes` from your entry point.
 use domius_web::router::Router;
 
+/// Builds the application router. Register one route per page here.
 pub fn register_routes() -> Router<fn()> {
     let mut router = Router::new();
     // router.register("/", home_page);
@@ -136,13 +138,16 @@ pub use view::{pascal};
                 r#"//! View for `{pascal}`.
 use domius_web::component::{{DomiusComponent, DomiusNode}};
 
+/// The `{pascal}` component.
 pub struct {pascal};
 
+/// Inputs passed to [`{pascal}`] by its parent.
 #[derive(Clone)]
 pub struct {pascal}Props {{
     // Add props here
 }}
 
+/// Reactive state owned by a mounted [`{pascal}`].
 pub struct {pascal}State {{
     // Add reactive state here
 }}
@@ -200,10 +205,12 @@ pub use view::{pascal}Page;
                 r#"//! Controller (setup logic) for `{pascal}Page`.
 use domius_core::signal::{{Signal, signal}};
 
+/// Reactive state owned by a mounted `{pascal}Page`.
 pub struct {pascal}State {{
     // Add reactive signals here
 }}
 
+/// Builds the page state. Called once when the page mounts.
 pub fn setup() -> {pascal}State {{
     {pascal}State {{}}
 }}
@@ -219,6 +226,7 @@ use domius_web::component::{{DomiusComponent, DomiusNode}};
 use domius_web::page::DomiusPage;
 use super::controller;
 
+/// The `{pascal}Page` route component.
 pub struct {pascal}Page;
 
 impl DomiusComponent for {pascal}Page {{

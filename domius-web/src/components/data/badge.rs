@@ -23,6 +23,7 @@ impl Default for BadgeVariant {
 }
 
 impl BadgeVariant {
+    /// Returns the CSS class applied for this variant.
     pub fn as_class(&self) -> &'static str {
         match self {
             BadgeVariant::Primary => "domius-badge-primary",

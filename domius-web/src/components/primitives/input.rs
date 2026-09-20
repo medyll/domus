@@ -34,6 +34,7 @@ impl Default for InputType {
 }
 
 impl InputType {
+    /// Returns the value used for the HTML `type` attribute.
     pub fn as_str(&self) -> &'static str {
         match self {
             InputType::Text => "text",
