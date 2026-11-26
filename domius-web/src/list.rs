@@ -247,8 +247,8 @@ mod tests {
         // "5" is inserted
         assert!(patch.ops.last() == Some(&DiffOp::Insert));
         // "1".."4" are kept
-        for i in 0..4 {
-            assert!(matches!(patch.ops[i], DiffOp::Keep(_)));
+        for op in patch.ops.iter().take(4) {
+            assert!(matches!(op, DiffOp::Keep(_)));
         }
     }
 
